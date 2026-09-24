@@ -520,7 +520,7 @@ WHERE
 
         res.setHeader(
             'Set-Cookie',
-            'AtlasAuth=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0'
+            'AtlasAuth=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0'
         );
 
         return send(res, 200, {

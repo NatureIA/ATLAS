@@ -1,0 +1,1 @@
+{"name":"atlas-monsterasp","version":"1.0.0","private":true,"main":"backend/src/server.js","scripts":{"start":"node backend/src/server.js"}}

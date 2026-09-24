@@ -1,10 +1,282 @@
-const A=document.querySelector('#app'),now=()=>String(new Date().getMonth()+1).padStart(2,'0')+'/'+new Date().getFullYear();let me=null,cad=[];
-async function api(u,o={}){const r=await fetch(u,{...o,headers:{'Content-Type':'application/json',...(o.headers||{})}}),x=await r.json().catch(()=>({}));if(!r.ok)throw Error(x.error||'Erro no ATLAS');return x}function err(e){return `<div class="error">${e.message||e}</div>`}
-async function start(){try{const s=await api('/api/setup/status');if(s.required)return setup();me=await api('/api/me');shell();dashboard()}catch{login()}}
-function setup(){A.innerHTML=`<main class="login"><form class="card" id="f"><h1>ATLAS</h1><p class="muted">Configuração inicial do administrador</p><div id="e"></div><label>Nome<input name="nome" required></label><label>E-mail<input name="email" type="email" required></label><label>Senha inicial<input name="senha" type="password" minlength="10" required></label><button>Criar administrador</button></form></main>`;f.onsubmit=async e=>{e.preventDefault();try{await api('/api/setup',{method:'POST',body:JSON.stringify(Object.fromEntries(new FormData(f)))});login()}catch(x){document.querySelector('#e').innerHTML=err(x)}}}
-function login(){A.innerHTML=`<main class="login"><form class="card" id="f"><h1>ATLAS</h1><p class="muted">Acesso ao sistema financeiro</p><div id="e"></div><label>E-mail<input name="email" type="email" required></label><label>Senha<input name="senha" type="password" required></label><button>Entrar</button></form></main>`;f.onsubmit=async e=>{e.preventDefault();try{await api('/api/login',{method:'POST',body:JSON.stringify(Object.fromEntries(new FormData(f)))});me=await api('/api/me');shell();dashboard()}catch(x){document.querySelector('#e').innerHTML=err(x)}}}
-function shell(){A.innerHTML=`<div class="shell"><header class="top"><div class="brand">ATLAS</div><div class="nav"><button onclick="dashboard()">Dashboard</button><button onclick="lancamentos()">Lançamentos</button><button onclick="logout()">Sair</button></div></header><main class="wrap" id="view"></main></div>`}async function logout(){await api('/api/logout',{method:'POST'});login()}
-async function dashboard(){const v=now(),d=await api('/api/dashboard?vigencia='+encodeURIComponent(v));view.innerHTML=`<div class="head"><div><h1>Dashboard</h1><div class="muted">Vigência ${v}</div></div><button onclick="lancamentos()">Novo lançamento</button></div><section class="grid"><article class="card metric"><span>Lançamentos</span><strong>${d.Quantidade||0}</strong></article><article class="card metric"><span>Movimentação</span><strong>${Number(d.Movimentacao||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</strong></article></section>`}
-async function loadCad(){cad=await api('/api/cadastros')}function opts(g){return `<option value="">Selecione</option>`+cad.filter(x=>+x.Grupo===g).map(x=>`<option value="${x.Id}">${x.Nome}</option>`).join('')+`<option value="new">+ Criar novo</option>`}
-async function lancamentos(){await loadCad();const v=now(),ls=await api('/api/lancamentos?vigencia='+encodeURIComponent(v));view.innerHTML=`<h1>Lançamentos</h1><section class="card"><form id="lf"><div id="le"></div><div class="form-grid"><label>Tipo<select name="tipoId" data-g="1">${opts(1)}</select></label><label>Categoria<select name="categoriaId" data-g="2">${opts(2)}</select></label><label>Forma de pagamento<select name="formaPagamentoId" data-g="3">${opts(3)}</select></label><label>Como será pago<select name="comoSeraPagoId" data-g="4">${opts(4)}</select></label><label>Descrição<input name="descricao" required></label><label>Valor total<input name="valor" type="number" min=".01" step=".01" required></label><label>Vigência<input name="vigencia" value="${v}" required></label><label id="pb" style="display:none">Quantidade de parcelas<input name="quantidadeParcelas" type="number" min="2"></label></div><button>Salvar lançamento</button></form></section><section class="card"><table><thead><tr><th>Descrição</th><th>Tipo</th><th>Categoria</th><th>Valor</th><th>Parcela</th></tr></thead><tbody>${ls.map(x=>`<tr><td>${x.Descricao}</td><td>${x.Tipo}</td><td>${x.Categoria}</td><td>${Number(x.Valor).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</td><td>${x.ParcelaAtual?x.ParcelaAtual+'/'+x.TotalParcelas:'—'}</td></tr>`).join('')||'<tr><td colspan="5">Nenhum lançamento.</td></tr>'}</tbody></table></section>`;document.querySelectorAll('select[data-g]').forEach(s=>s.onchange=async()=>{if(s.value==='new'){const n=prompt('Nome da nova opção:');if(!n){s.value='';return}const x=await api('/api/cadastros',{method:'POST',body:JSON.stringify({grupo:+s.dataset.g,nome:n})});const o=new Option(x.Nome,x.Id);s.add(o,s.options.length-1);s.value=x.Id}toggle()});lf.onsubmit=async e=>{e.preventDefault();try{const b=Object.fromEntries(new FormData(lf));await api('/api/lancamentos',{method:'POST',body:JSON.stringify(b)});lancamentos()}catch(x){le.innerHTML=err(x)}};toggle()}
-function toggle(){const s=document.querySelector('[name=comoSeraPagoId]'),b=document.querySelector('#pb');if(!s||!b)return;const p=s.options[s.selectedIndex]?.text.toLowerCase()==='parcelado';b.style.display=p?'flex':'none';b.querySelector('input').required=p}start();
+const A=document.querySelector('#app'),now=()=>String(new Date().getMonth()+1).padStart(2,'0')+'/'+new Date().getFullYear();let me=null,cad=[],vigenciaAtual=now();
+
+async function api(u,o={}){const r=await fetch(u,{...o,headers:{'Content-Type':'application/json',...(o.headers||{})}}),x=await r.json().catch(()=>({}));if(!r.ok)throw Error(x.error||'Erro no ATLAS');return x}
+
+function err(e){return `<div class="error">${e.message||e}</div>`}
+
+function mudarVigencia(v,delta){
+  const [m,a]=v.split('/').map(Number);
+  const d=new Date(a,m-1+delta,1);
+  return String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear();
+}
+
+async function start(){
+  try{
+    const s=await api('/api/setup/status');
+    if(s.required)return setup();
+    me=await api('/api/me');
+    shell();
+    dashboard()
+  }catch{
+    login()
+  }
+}
+
+function setup(){
+  A.innerHTML=`<main class="login"><form class="card" id="f"><h1>ATLAS</h1><p class="muted">Configuração inicial do administrador</p><div id="e"></div><label>Nome<input name="nome" required></label><label>E-mail<input name="email" type="email" required></label><label>Senha inicial<input name="senha" type="password" minlength="10" required></label><button>Criar administrador</button></form></main>`;
+  f.onsubmit=async e=>{
+    e.preventDefault();
+    try{
+      await api('/api/setup',{method:'POST',body:JSON.stringify(Object.fromEntries(new FormData(f)))});
+      login()
+    }catch(x){
+      document.querySelector('#e').innerHTML=err(x)
+    }
+  }
+}
+
+function login(){
+  A.innerHTML=`<main class="login"><form class="card" id="f"><h1>ATLAS</h1><p class="muted">Acesso ao sistema financeiro</p><div id="e"></div><label>E-mail<input name="email" type="email" required></label><label>Senha<input name="senha" type="password" required></label><button>Entrar</button></form></main>`;
+  f.onsubmit=async e=>{
+    e.preventDefault();
+    try{
+      await api('/api/login',{method:'POST',body:JSON.stringify(Object.fromEntries(new FormData(f)))});
+      me=await api('/api/me');
+      shell();
+      dashboard()
+    }catch(x){
+      document.querySelector('#e').innerHTML=err(x)
+    }
+  }
+}
+
+function shell(){
+  A.innerHTML=`<div class="shell"><header class="top"><div class="brand">ATLAS</div><div class="nav"><button onclick="dashboard()">Dashboard</button><button onclick="lancamentos()">Lançamentos</button><button onclick="logout()">Sair</button></div></header><main class="wrap" id="view"></main></div>`
+}
+
+async function logout(){
+  await api('/api/logout',{method:'POST'});
+  login()
+}
+
+async function dashboard(v=vigenciaAtual){
+  vigenciaAtual=v;
+  const d=await api('/api/dashboard?vigencia='+encodeURIComponent(v));
+
+  view.innerHTML=`
+    <div class="head">
+      <div>
+        <h1>Dashboard</h1>
+
+        <div style="display:flex;align-items:center;gap:12px;margin-top:8px">
+          <button type="button" onclick="dashboard(mudarVigencia(vigenciaAtual,-1))">←</button>
+
+          <strong>${v}</strong>
+
+          <button type="button" onclick="dashboard(mudarVigencia(vigenciaAtual,1))">→</button>
+
+          ${v!==now()?`<button type="button" onclick="dashboard(now())">Mês atual</button>`:''}
+        </div>
+      </div>
+
+      <button onclick="lancamentos(vigenciaAtual)">Novo lançamento</button>
+    </div>
+
+    <section class="grid">
+      <article class="card metric">
+        <span>Lançamentos</span>
+        <strong>${d.Quantidade||0}</strong>
+      </article>
+
+      <article class="card metric">
+        <span>Movimentação</span>
+        <strong>${Number(d.Movimentacao||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</strong>
+      </article>
+    </section>
+  `
+}
+
+async function loadCad(){
+  cad=await api('/api/cadastros')
+}
+
+function opts(g){
+  return `<option value="">Selecione</option>`+
+  cad.filter(x=>+x.Grupo===g)
+  .map(x=>`<option value="${x.Id}">${x.Nome}</option>`)
+  .join('')+
+  `<option value="new">+ Criar novo</option>`
+}
+
+async function lancamentos(v=vigenciaAtual){
+  vigenciaAtual=v;
+
+  await loadCad();
+
+  const ls=await api('/api/lancamentos?vigencia='+encodeURIComponent(v));
+
+  view.innerHTML=`
+    <div class="head">
+      <div>
+        <h1>Lançamentos</h1>
+
+        <div style="display:flex;align-items:center;gap:12px;margin-top:8px">
+          <button type="button" onclick="lancamentos(mudarVigencia(vigenciaAtual,-1))">←</button>
+
+          <strong>${v}</strong>
+
+          <button type="button" onclick="lancamentos(mudarVigencia(vigenciaAtual,1))">→</button>
+
+          ${v!==now()?`<button type="button" onclick="lancamentos(now())">Mês atual</button>`:''}
+        </div>
+      </div>
+    </div>
+
+    <section class="card">
+      <form id="lf">
+        <div id="le"></div>
+
+        <div class="form-grid">
+          <label>
+            Tipo
+            <select name="tipoId" data-g="1">
+              ${opts(1)}
+            </select>
+          </label>
+
+          <label>
+            Categoria
+            <select name="categoriaId" data-g="2">
+              ${opts(2)}
+            </select>
+          </label>
+
+          <label>
+            Forma de pagamento
+            <select name="formaPagamentoId" data-g="3">
+              ${opts(3)}
+            </select>
+          </label>
+
+          <label>
+            Como será pago
+            <select name="comoSeraPagoId" data-g="4">
+              ${opts(4)}
+            </select>
+          </label>
+
+          <label>
+            Descrição
+            <input name="descricao" required>
+          </label>
+
+          <label>
+            Valor total
+            <input name="valor" type="number" min=".01" step=".01" required>
+          </label>
+
+          <label>
+            Vigência
+            <input name="vigencia" value="${v}" required>
+          </label>
+
+          <label id="pb" style="display:none">
+            Quantidade de parcelas
+            <input name="quantidadeParcelas" type="number" min="2">
+          </label>
+        </div>
+
+        <button>Salvar lançamento</button>
+      </form>
+    </section>
+
+    <section class="card">
+      <table>
+        <thead>
+          <tr>
+            <th>Descrição</th>
+            <th>Tipo</th>
+            <th>Categoria</th>
+            <th>Valor</th>
+            <th>Parcela</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          ${
+            ls.map(x=>`
+              <tr>
+                <td>${x.Descricao}</td>
+                <td>${x.Tipo}</td>
+                <td>${x.Categoria}</td>
+                <td>${Number(x.Valor).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</td>
+                <td>${x.ParcelaAtual?x.ParcelaAtual+'/'+x.TotalParcelas:'—'}</td>
+              </tr>
+            `).join('')||
+            '<tr><td colspan="5">Nenhum lançamento.</td></tr>'
+          }
+        </tbody>
+      </table>
+    </section>
+  `;
+
+  document.querySelectorAll('select[data-g]').forEach(s=>s.onchange=async()=>{
+    if(s.value==='new'){
+      const n=prompt('Nome da nova opção:');
+
+      if(!n){
+        s.value='';
+        return
+      }
+
+      const x=await api('/api/cadastros',{
+        method:'POST',
+        body:JSON.stringify({
+          grupo:+s.dataset.g,
+          nome:n
+        })
+      });
+
+      const o=new Option(x.Nome,x.Id);
+
+      s.add(o,s.options.length-1);
+      s.value=x.Id
+    }
+
+    toggle()
+  });
+
+  lf.onsubmit=async e=>{
+    e.preventDefault();
+
+    try{
+      const b=Object.fromEntries(new FormData(lf));
+
+      await api('/api/lancamentos',{
+        method:'POST',
+        body:JSON.stringify(b)
+      });
+
+      vigenciaAtual=b.vigencia;
+      lancamentos(vigenciaAtual)
+    }catch(x){
+      le.innerHTML=err(x)
+    }
+  };
+
+  toggle()
+}
+
+function toggle(){
+  const s=document.querySelector('[name=comoSeraPagoId]');
+  const b=document.querySelector('#pb');
+
+  if(!s||!b)return;
+
+  const p=s.options[s.selectedIndex]?.text.toLowerCase()==='parcelado';
+
+  b.style.display=p?'flex':'none';
+  b.querySelector('input').required=p
+}
+
+start();

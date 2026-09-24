@@ -503,7 +503,7 @@ WHERE
             'Set-Cookie',
             `AtlasAuth=${token(
                 a[0]
-            )}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=86400`
+            )}; Path=/; HttpOnly; SameSite=Lax; Max-Age=86400`
         );
 
         return send(res, 200, {

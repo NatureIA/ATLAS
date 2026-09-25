@@ -664,10 +664,7 @@ ORDER BY Id DESC
             });
         }
 
-        return send(
-            res,
-            200,
-            await sql(`
+        const lancamentos = await sql(`
 SELECT
     l.*,
     t.Nome Tipo,
@@ -694,10 +691,66 @@ WHERE
 
 ORDER BY
     l.Id DESC
-`)
+`);
+
+        const recorrentes = await sql(`
+SELECT
+    l.Id,
+    l.UsuarioId,
+    l.TipoId,
+    l.CategoriaId,
+    l.FormaPagamentoId,
+    l.ComoSeraPagoId,
+    l.Descricao,
+    l.Valor,
+    CAST('${v}' AS DATE) Vigencia,
+    l.SerieId,
+    NULL ParcelaAtual,
+    NULL TotalParcelas,
+    l.Origem,
+    l.CriadoEm,
+    t.Nome Tipo,
+    c.Nome Categoria,
+    f.Nome FormaPagamento,
+    p.Nome ComoSeraPago
+FROM dbo.SeriesFinanceiras s
+
+JOIN dbo.Lancamentos l
+    ON l.SerieId=s.Id
+    AND l.Vigencia=s.VigenciaInicial
+
+JOIN dbo.CadastrosFinanceiros t
+    ON t.Id=l.TipoId
+
+JOIN dbo.CadastrosFinanceiros c
+    ON c.Id=l.CategoriaId
+
+JOIN dbo.CadastrosFinanceiros f
+    ON f.Id=l.FormaPagamentoId
+
+JOIN dbo.CadastrosFinanceiros p
+    ON p.Id=l.ComoSeraPagoId
+
+WHERE
+    s.UsuarioId=${u.id}
+    AND s.Regra='RECORRENTE'
+    AND s.VigenciaInicial<='${v}'
+    AND (
+        s.CanceladaAPartirDe IS NULL
+        OR s.CanceladaAPartirDe>'${v}'
+    )
+    AND '${v}'<>s.VigenciaInicial
+`);
+
+        return send(
+            res,
+            200,
+            [
+                ...lancamentos,
+                ...recorrentes
+            ]
         );
     }
-
     /* CRIAR LANÇAMENTO */
 
     if (

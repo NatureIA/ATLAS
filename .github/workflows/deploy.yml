@@ -1,0 +1,62 @@
+name: Deploy ATLAS
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: windows-latest
+
+    steps:
+      - name: Baixar codigo
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Build ATLAS
+        run: npm run build
+
+      - name: Publicar no MonsterASP
+        shell: powershell
+        env:
+          PUBLISH_PROFILE: ${{ secrets.MONSTERASP_PUBLISH_PROFILE }}
+        run: |
+          $profilePath = "$env:RUNNER_TEMP\atlas.PublishSettings"
+          $env:PUBLISH_PROFILE | Out-File -FilePath $profilePath -Encoding utf8
+
+          [xml]$xml = Get-Content $profilePath
+
+          $profile = $xml.publishData.publishProfile |
+            Where-Object { $_.publishMethod -eq "MSDeploy" } |
+            Select-Object -First 1
+
+          if (-not $profile) {
+            throw "Perfil MSDeploy nao encontrado."
+          }
+
+          $msdeploy = "${env:ProgramFiles}\IIS\Microsoft Web Deploy V3\msdeploy.exe"
+
+          if (-not (Test-Path $msdeploy)) {
+            throw "MSDeploy nao encontrado no GitHub Actions."
+          }
+
+          & $msdeploy `
+            -verb:sync `
+            -source:contentPath="$env:GITHUB_WORKSPACE" `
+            -dest:contentPath="$($profile.msdeploySite)",computerName="$($profile.publishUrl)",userName="$($profile.userName)",password="$($profile.userPWD)",authType="Basic" `
+            -enableRule:AppOffline `
+            -skip:Directory="\\.git($|\\)" `
+            -skip:Directory="\\.github($|\\)" `
+            -skip:File="\\.env$"
+
+          if ($LASTEXITCODE -ne 0) {
+            throw "Falha no deploy para MonsterASP."
+          }

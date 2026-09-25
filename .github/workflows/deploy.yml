@@ -19,7 +19,7 @@ jobs:
           node-version: 22
 
       - name: Instalar dependencias
-        run: npm ci
+        run: npm install
 
       - name: Build ATLAS
         run: npm run build

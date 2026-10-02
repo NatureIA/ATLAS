@@ -325,6 +325,17 @@ CREATE TABLE dbo.AuditLog(
     Dados NVARCHAR(MAX) NULL,
     CriadoEm DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME()
 );
+
+IF OBJECT_ID('dbo.ExcecoesRecorrencia') IS NULL
+CREATE TABLE dbo.ExcecoesRecorrencia(
+    Id BIGINT IDENTITY PRIMARY KEY,
+    UsuarioId INT NOT NULL,
+    SerieId UNIQUEIDENTIFIER NOT NULL,
+    Vigencia DATE NOT NULL,
+    Acao VARCHAR(20) NOT NULL,
+    CriadoEm DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME()
+);
+
 `);
 
     const c = await sql(`
@@ -689,6 +700,16 @@ WHERE
     l.UsuarioId=${u.id}
     AND l.Vigencia='${v}'
 
+    AND NOT EXISTS(
+        SELECT 1
+        FROM dbo.ExcecoesRecorrencia e
+        WHERE
+            e.UsuarioId=${u.id}
+            AND e.SerieId=l.SerieId
+            AND e.Vigencia=l.Vigencia
+            AND e.Acao='EXCLUIR'
+    )
+
 ORDER BY
     l.Id DESC
 `);
@@ -740,7 +761,27 @@ WHERE
         OR s.CanceladaAPartirDe>'${v}'
     )
     AND '${v}'<>s.VigenciaInicial
+
+    AND NOT EXISTS(
+        SELECT 1
+        FROM dbo.ExcecoesRecorrencia e
+        WHERE
+            e.UsuarioId=${u.id}
+            AND e.SerieId=s.Id
+            AND e.Vigencia='${v}'
+            AND e.Acao='EXCLUIR'
+    )
+
+    AND NOT EXISTS(
+        SELECT 1
+        FROM dbo.Lancamentos ex
+        WHERE
+            ex.UsuarioId=${u.id}
+            AND ex.SerieId=s.Id
+            AND ex.Vigencia='${v}'
+    )
 `);
+
 
         return send(
             res,
@@ -751,6 +792,7 @@ WHERE
             ]
         );
     }
+
     /* CRIAR LANÇAMENTO */
 
     if (
@@ -958,11 +1000,23 @@ VALUES(
 );
 `);
 
-        /* À VISTA / OUTROS */
+                const sid =
+                    crypto.randomUUID();
 
-        } else {
+                await exec(`
+INSERT dbo.SeriesFinanceiras(
+    Id,
+    UsuarioId,
+    Regra,
+    VigenciaInicial
+)
+VALUES(
+    '${sid}',
+    ${u.id},
+    'RECORRENTE',
+    '${v}'
+);
 
-            await exec(`
 INSERT dbo.Lancamentos(
     UsuarioId,
     TipoId,
@@ -971,13 +1025,216 @@ INSERT dbo.Lancamentos(
     ComoSeraPagoId,
     Descricao,
     Valor,
-    Vigencia
+    Vigencia,
+    SerieId
 )
 VALUES(
-    ${base},
-    '${v}'
+    ${u.id},
+    ${+b.tipoId},
+    ${+b.categoriaId},
+    ${+b.formaPagamentoId},
+    ${+b.comoSeraPagoId},
+    N'${descricao}',
+    ${valor.toFixed(2)},
+    '${v}',
+    '${sid}'
 );
 `);
+
+            } else {
+
+                /*
+                    Se a ocorrência recorrente ainda é
+                    virtual, cria uma exceção física
+                    somente para aquele mês.
+                */
+
+                const vigenciaInicial = atual.VigenciaInicial
+                    ? new Date(atual.VigenciaInicial)
+                        .toISOString()
+                        .slice(0, 10)
+                    : null;
+
+                /*
+                    Se estamos editando justamente o PRIMEIRO mês
+                    da recorrência, não podemos alterar simplesmente
+                    o registro-base, porque ele gera os meses futuros.
+                */
+                if (vigenciaInicial === v) {
+
+                    /*
+                        Guarda os dados originais antes de alterar
+                        somente este mês.
+                    */
+                    const original = {
+                        TipoId: atual.TipoId,
+                        CategoriaId: atual.CategoriaId,
+                        FormaPagamentoId: atual.FormaPagamentoId,
+                        ComoSeraPagoId: atual.ComoSeraPagoId,
+                        Descricao: atual.Descricao,
+                        Valor: Number(atual.Valor)
+                    };
+
+                    const proxima = (
+                        await sql(`
+SELECT CONVERT(
+    VARCHAR(10),
+    DATEADD(month, 1, '${v}'),
+    23
+) Vigencia
+`)
+                    )[0].Vigencia;
+
+                    const cancelamentoOriginal =
+                        atual.CanceladaAPartirDe
+                            ? new Date(atual.CanceladaAPartirDe)
+                                .toISOString()
+                                .slice(0, 10)
+                            : null;
+
+                    /*
+                        A série original termina depois deste mês.
+                    */
+                    await exec(`
+UPDATE dbo.SeriesFinanceiras
+SET
+    CanceladaAPartirDe='${proxima}'
+WHERE
+    Id='${atual.SerieId}'
+    AND UsuarioId=${u.id}
+`);
+
+                    /*
+                        Agora o registro inicial pode receber
+                        a alteração exclusiva deste mês.
+                    */
+                    await exec(`
+UPDATE dbo.Lancamentos
+SET
+    ${setDados}
+WHERE
+    Id=${id}
+    AND UsuarioId=${u.id}
+`);
+
+                    /*
+                        Recria a continuidade da recorrência
+                        a partir do próximo mês usando os
+                        dados ORIGINAIS.
+                    */
+                    if (
+                        !cancelamentoOriginal ||
+                        cancelamentoOriginal > proxima
+                    ) {
+
+                        const novaSerie = crypto.randomUUID();
+
+                        await exec(`
+INSERT dbo.SeriesFinanceiras(
+    Id,
+    UsuarioId,
+    Regra,
+    VigenciaInicial,
+    CanceladaAPartirDe
+)
+VALUES(
+    '${novaSerie}',
+    ${u.id},
+    'RECORRENTE',
+    '${proxima}',
+    ${
+        cancelamentoOriginal
+            ? `'${cancelamentoOriginal}'`
+            : 'NULL'
+    }
+);
+
+INSERT dbo.Lancamentos(
+    UsuarioId,
+    TipoId,
+    CategoriaId,
+    FormaPagamentoId,
+    ComoSeraPagoId,
+    Descricao,
+    Valor,
+    Vigencia,
+    SerieId,
+    Origem
+)
+VALUES(
+    ${u.id},
+    ${original.TipoId},
+    ${original.CategoriaId},
+    ${original.FormaPagamentoId},
+    ${original.ComoSeraPagoId},
+    N'${esc(original.Descricao)}',
+    ${original.Valor.toFixed(2)},
+    '${proxima}',
+    '${novaSerie}',
+    '${esc(atual.Origem || 'PORTAL')}'
+);
+`);
+                    }
+
+                } else {
+
+                    /*
+                        Para qualquer mês posterior ao primeiro,
+                        cria ou altera somente a ocorrência
+                        específica daquele mês.
+                    */
+                    const fisico = (
+                        await sql(`
+SELECT TOP 1 Id
+FROM dbo.Lancamentos
+WHERE
+    UsuarioId=${u.id}
+    AND SerieId='${atual.SerieId}'
+    AND Vigencia='${v}'
+`)
+                    )[0];
+
+                    if (fisico) {
+
+                        await exec(`
+UPDATE dbo.Lancamentos
+SET
+    ${setDados}
+WHERE
+    Id=${fisico.Id}
+    AND UsuarioId=${u.id}
+`);
+
+                    } else {
+
+                        await exec(`
+INSERT dbo.Lancamentos(
+    UsuarioId,
+    TipoId,
+    CategoriaId,
+    FormaPagamentoId,
+    ComoSeraPagoId,
+    Descricao,
+    Valor,
+    Vigencia,
+    SerieId
+)
+VALUES(
+    ${u.id},
+    ${+b.tipoId},
+    ${+b.categoriaId},
+    ${+b.formaPagamentoId},
+    ${+b.comoSeraPagoId},
+    N'${descricao}',
+    ${valor.toFixed(2)},
+    '${v}',
+    '${atual.SerieId}'
+);
+`);
+                    }
+                }
+
+            }
         }
 
         await exec(`
@@ -988,17 +1245,213 @@ INSERT dbo.AuditLog(
 )
 VALUES(
     ${u.id},
-    N'CRIAR_LANCAMENTO',
-    N'${esc(
-        b.descricao
+    N'EDITAR_LANCAMENTO',
+    N'ID ${id} | ${escopo} | ${descricao}'
+)
+`);
+
+        return send(res, 200, {
+            ok: true
+        });
+    }
+
+    /* =========================================================
+       EXCLUIR / CANCELAR LANÇAMENTO
+       ========================================================= */
+
+    if (
+        url.pathname === '/api/lancamentos/excluir' &&
+        req.method === 'POST'
+    ) {
+
+        const b = await body(req);
+
+        const id = Number(b.id);
+        const v = month(b.vigencia);
+        const escopo =
+            String(
+                b.escopo || 'UNICO'
+            ).toUpperCase();
+
+        if (
+            !Number.isInteger(id) ||
+            id <= 0 ||
+            !v
+        ) {
+            return send(res, 400, {
+                error: 'Dados inválidos.'
+            });
+        }
+
+        const atual = (
+            await sql(`
+SELECT TOP 1
+    l.*,
+    s.Regra,
+    s.VigenciaInicial,
+    s.CanceladaAPartirDe
+FROM dbo.Lancamentos l
+LEFT JOIN dbo.SeriesFinanceiras s
+    ON s.Id=l.SerieId
+WHERE
+    l.Id=${id}
+    AND l.UsuarioId=${u.id}
+`)
+        )[0];
+
+        if (!atual) {
+            return send(res, 404, {
+                error: 'Lançamento não encontrado.'
+            });
+        }
+
+        /* LANÇAMENTO ÚNICO */
+
+        if (!atual.SerieId) {
+
+            await exec(`
+DELETE FROM dbo.Lancamentos
+WHERE
+    Id=${id}
+    AND UsuarioId=${u.id}
+`);
+
+        /* PARCELADO */
+
+        } else if (
+            String(atual.Regra).toUpperCase() ===
+            'PARCELADO'
+        ) {
+
+            if (
+                escopo === 'PROXIMOS'
+            ) {
+
+                await exec(`
+DELETE FROM dbo.Lancamentos
+WHERE
+    UsuarioId=${u.id}
+    AND SerieId='${atual.SerieId}'
+    AND Vigencia>='${v}'
+`);
+
+            } else {
+
+                await exec(`
+DELETE FROM dbo.Lancamentos
+WHERE
+    Id=${id}
+    AND UsuarioId=${u.id}
+`);
+            }
+
+        /* RECORRENTE */
+
+        } else if (
+            String(atual.Regra).toUpperCase() ===
+            'RECORRENTE'
+        ) {
+
+            if (
+                escopo === 'PROXIMOS'
+            ) {
+
+                await exec(`
+UPDATE dbo.SeriesFinanceiras
+SET
+    CanceladaAPartirDe='${v}'
+WHERE
+    Id='${atual.SerieId}'
+    AND UsuarioId=${u.id};
+
+DELETE FROM dbo.Lancamentos
+WHERE
+    UsuarioId=${u.id}
+    AND SerieId='${atual.SerieId}'
+    AND Vigencia>='${v}'
+    AND Vigencia<>(
+        SELECT VigenciaInicial
+        FROM dbo.SeriesFinanceiras
+        WHERE Id='${atual.SerieId}'
+    );
+`);
+
+            } else {
+
+                /*
+                    Excluir apenas uma ocorrência recorrente
+                    precisa registrar uma exceção para que
+                    ela não seja recriada pela projeção.
+                */
+
+                await exec(`
+IF OBJECT_ID('dbo.ExcecoesRecorrencia') IS NULL
+CREATE TABLE dbo.ExcecoesRecorrencia(
+    Id BIGINT IDENTITY PRIMARY KEY,
+    UsuarioId INT NOT NULL,
+    SerieId UNIQUEIDENTIFIER NOT NULL,
+    Vigencia DATE NOT NULL,
+    Acao VARCHAR(20) NOT NULL,
+    CriadoEm DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME()
+);
+
+IF NOT EXISTS(
+    SELECT 1
+    FROM dbo.ExcecoesRecorrencia
+    WHERE
+        UsuarioId=${u.id}
+        AND SerieId='${atual.SerieId}'
+        AND Vigencia='${v}'
+        AND Acao='EXCLUIR'
+)
+INSERT dbo.ExcecoesRecorrencia(
+    UsuarioId,
+    SerieId,
+    Vigencia,
+    Acao
+)
+VALUES(
+    ${u.id},
+    '${atual.SerieId}',
+    '${v}',
+    'EXCLUIR'
+);
+
+DELETE FROM dbo.Lancamentos
+WHERE
+    UsuarioId=${u.id}
+    AND SerieId='${atual.SerieId}'
+    AND Vigencia='${v}'
+    AND Vigencia<>(
+        SELECT VigenciaInicial
+        FROM dbo.SeriesFinanceiras
+        WHERE Id='${atual.SerieId}'
+    );
+`);
+            }
+        }
+
+        await exec(`
+INSERT dbo.AuditLog(
+    UsuarioId,
+    Acao,
+    Dados
+)
+VALUES(
+    ${u.id},
+    N'EXCLUIR_LANCAMENTO',
+    N'ID ${id} | ${escopo} | ${esc(
+        atual.Descricao
     )}'
 )
 `);
 
-        return send(res, 201, {
+        return send(res, 200, {
             ok: true
         });
     }
+
+
 
     /* DASHBOARD */
 
@@ -1021,31 +1474,398 @@ VALUES(
             });
         }
 
-        const result =
-            await sql(`
+        const result = await sql(`
 SELECT
     COUNT(*) Quantidade,
+
     COALESCE(
-        SUM(Valor),
+        SUM(
+            CASE
+                WHEN LOWER(Tipo) = N'receita' THEN Valor
+                WHEN LOWER(Tipo) = N'despesa' THEN -Valor
+                ELSE 0
+            END
+        ),
+        0
+    ) Saldo,
+
+    COALESCE(
+        SUM(
+            CASE
+                WHEN LOWER(Tipo) = N'receita' THEN Valor
+                ELSE 0
+            END
+        ),
+        0
+    ) Receitas,
+
+    COALESCE(
+        SUM(
+            CASE
+                WHEN LOWER(Tipo) = N'despesa' THEN -Valor
+                ELSE 0
+            END
+        ),
+        0
+    ) Despesas,
+
+    COALESCE(
+        SUM(
+            CASE
+                WHEN LOWER(Tipo) = N'economia' THEN Valor
+                ELSE 0
+            END
+        ),
+        0
+    ) Economia,
+
+    COALESCE(
+        SUM(
+            CASE
+                WHEN LOWER(Tipo) = N'receita' THEN Valor
+                WHEN LOWER(Tipo) = N'despesa' THEN -Valor
+                WHEN LOWER(Tipo) = N'economia' THEN Valor
+                ELSE 0
+            END
+        ),
         0
     ) Movimentacao
-FROM dbo.Lancamentos
-WHERE
-    UsuarioId=${u.id}
-    AND Vigencia='${v}'
+
+FROM (
+SELECT
+    l.Id,
+    l.Valor,
+    t.Nome Tipo
+FROM dbo.Lancamentos l
+
+JOIN dbo.CadastrosFinanceiros t
+    ON t.Id=l.TipoId
+    WHERE
+        l.UsuarioId=${u.id}
+        AND l.Vigencia='${v}'
+
+        AND NOT EXISTS(
+            SELECT 1
+            FROM dbo.ExcecoesRecorrencia e
+            WHERE
+                e.UsuarioId=${u.id}
+                AND e.SerieId=l.SerieId
+                AND e.Vigencia=l.Vigencia
+                AND e.Acao='EXCLUIR'
+        )
+
+
+    UNION ALL
+
+SELECT
+    l.Id,
+    l.Valor,
+    t.Nome Tipo
+FROM dbo.SeriesFinanceiras s
+
+JOIN dbo.Lancamentos l
+    ON l.SerieId=s.Id
+    AND l.Vigencia=s.VigenciaInicial
+
+JOIN dbo.CadastrosFinanceiros t
+    ON t.Id=l.TipoId
+
+    WHERE
+        s.UsuarioId=${u.id}
+        AND s.Regra='RECORRENTE'
+        AND s.VigenciaInicial<'${v}'
+        AND (
+            s.CanceladaAPartirDe IS NULL
+            OR s.CanceladaAPartirDe>'${v}'
+        )
+
+        AND NOT EXISTS(
+            SELECT 1
+            FROM dbo.ExcecoesRecorrencia e
+            WHERE
+                e.UsuarioId=${u.id}
+                AND e.SerieId=s.Id
+                AND e.Vigencia='${v}'
+                AND e.Acao='EXCLUIR'
+        )
+
+        AND NOT EXISTS(
+            SELECT 1
+            FROM dbo.Lancamentos ex
+            WHERE
+                ex.UsuarioId=${u.id}
+                AND ex.SerieId=s.Id
+                AND ex.Vigencia='${v}'
+        )
+) x
 `);
 
-        return send(
-            res,
-            200,
-            result[0]
-        );
+
+const anterior = await sql(`
+SELECT
+    COALESCE(
+        SUM(
+            CASE
+                WHEN LOWER(Tipo)=N'receita' THEN Valor
+                ELSE 0
+            END
+        ),
+        0
+    ) Receitas,
+
+    COALESCE(
+        SUM(
+            CASE
+                WHEN LOWER(Tipo)=N'despesa' THEN -Valor
+                ELSE 0
+            END
+        ),
+        0
+    ) Despesas,
+
+    COALESCE(
+        SUM(
+            CASE
+                WHEN LOWER(Tipo)=N'receita' THEN Valor
+                WHEN LOWER(Tipo)=N'despesa' THEN -Valor
+                ELSE 0
+            END
+        ),
+        0
+    ) Saldo
+
+FROM (
+
+    SELECT
+        l.Valor,
+        t.Nome Tipo
+
+    FROM dbo.Lancamentos l
+
+    JOIN dbo.CadastrosFinanceiros t
+        ON t.Id=l.TipoId
+
+    WHERE
+        l.UsuarioId=${u.id}
+        AND l.Vigencia=DATEADD(month,-1,'${v}')
+
+        AND NOT EXISTS(
+            SELECT 1
+            FROM dbo.ExcecoesRecorrencia e
+            WHERE
+                e.UsuarioId=${u.id}
+                AND e.SerieId=l.SerieId
+                AND e.Vigencia=l.Vigencia
+                AND e.Acao='EXCLUIR'
+        )
+
+    UNION ALL
+
+    SELECT
+        l.Valor,
+        t.Nome Tipo
+
+    FROM dbo.SeriesFinanceiras s
+
+    JOIN dbo.Lancamentos l
+        ON l.SerieId=s.Id
+        AND l.Vigencia=s.VigenciaInicial
+
+    JOIN dbo.CadastrosFinanceiros t
+        ON t.Id=l.TipoId
+
+    WHERE
+        s.UsuarioId=${u.id}
+        AND s.Regra='RECORRENTE'
+
+        AND s.VigenciaInicial<
+            DATEADD(month,-1,'${v}')
+
+        AND (
+            s.CanceladaAPartirDe IS NULL
+            OR s.CanceladaAPartirDe>
+                DATEADD(month,-1,'${v}')
+        )
+
+        AND NOT EXISTS(
+            SELECT 1
+            FROM dbo.ExcecoesRecorrencia e
+            WHERE
+                e.UsuarioId=${u.id}
+                AND e.SerieId=s.Id
+                AND e.Vigencia=
+                    DATEADD(month,-1,'${v}')
+                AND e.Acao='EXCLUIR'
+        )
+
+        AND NOT EXISTS(
+            SELECT 1
+            FROM dbo.Lancamentos ex
+            WHERE
+                ex.UsuarioId=${u.id}
+                AND ex.SerieId=s.Id
+                AND ex.Vigencia=
+                    DATEADD(month,-1,'${v}')
+        )
+
+) x
+`);
+
+
+
+const categoriasDespesas = await sql(`
+SELECT
+    Categoria,
+    SUM(Valor) Valor
+FROM (
+
+    SELECT
+        c.Nome Categoria,
+        l.Valor
+
+    FROM dbo.Lancamentos l
+
+    JOIN dbo.CadastrosFinanceiros t
+        ON t.Id=l.TipoId
+
+    JOIN dbo.CadastrosFinanceiros c
+        ON c.Id=l.CategoriaId
+
+    WHERE
+        l.UsuarioId=${u.id}
+        AND l.Vigencia='${v}'
+        AND LOWER(t.Nome)=N'despesa'
+
+        AND NOT EXISTS(
+            SELECT 1
+            FROM dbo.ExcecoesRecorrencia e
+            WHERE
+                e.UsuarioId=${u.id}
+                AND e.SerieId=l.SerieId
+                AND e.Vigencia=l.Vigencia
+                AND e.Acao='EXCLUIR'
+        )
+
+    UNION ALL
+
+    SELECT
+        c.Nome Categoria,
+        l.Valor
+
+    FROM dbo.SeriesFinanceiras s
+
+    JOIN dbo.Lancamentos l
+        ON l.SerieId=s.Id
+        AND l.Vigencia=s.VigenciaInicial
+
+    JOIN dbo.CadastrosFinanceiros t
+        ON t.Id=l.TipoId
+
+    JOIN dbo.CadastrosFinanceiros c
+        ON c.Id=l.CategoriaId
+
+    WHERE
+        s.UsuarioId=${u.id}
+        AND s.Regra='RECORRENTE'
+        AND LOWER(t.Nome)=N'despesa'
+        AND s.VigenciaInicial<'${v}'
+
+        AND (
+            s.CanceladaAPartirDe IS NULL
+            OR s.CanceladaAPartirDe>'${v}'
+        )
+
+        AND NOT EXISTS(
+            SELECT 1
+            FROM dbo.ExcecoesRecorrencia e
+            WHERE
+                e.UsuarioId=${u.id}
+                AND e.SerieId=s.Id
+                AND e.Vigencia='${v}'
+                AND e.Acao='EXCLUIR'
+        )
+
+        AND NOT EXISTS(
+            SELECT 1
+            FROM dbo.Lancamentos ex
+            WHERE
+                ex.UsuarioId=${u.id}
+                AND ex.SerieId=s.Id
+                AND ex.Vigencia='${v}'
+        )
+
+) x
+
+GROUP BY Categoria
+ORDER BY Valor DESC
+`);
+
+const maioresDespesas = await sql(`
+SELECT TOP 5 Descricao, Categoria, Valor
+FROM (
+    SELECT l.Descricao, c.Nome Categoria, l.Valor
+    FROM dbo.Lancamentos l
+    JOIN dbo.CadastrosFinanceiros t ON t.Id=l.TipoId
+    JOIN dbo.CadastrosFinanceiros c ON c.Id=l.CategoriaId
+    WHERE l.UsuarioId=${u.id}
+      AND l.Vigencia='${v}'
+      AND LOWER(t.Nome)=N'despesa'
+      AND NOT EXISTS(
+        SELECT 1 FROM dbo.ExcecoesRecorrencia e
+        WHERE e.UsuarioId=${u.id}
+          AND e.SerieId=l.SerieId
+          AND e.Vigencia=l.Vigencia
+          AND e.Acao='EXCLUIR'
+      )
+    UNION ALL
+    SELECT l.Descricao, c.Nome Categoria, l.Valor
+    FROM dbo.SeriesFinanceiras s
+    JOIN dbo.Lancamentos l ON l.SerieId=s.Id AND l.Vigencia=s.VigenciaInicial
+    JOIN dbo.CadastrosFinanceiros t ON t.Id=l.TipoId
+    JOIN dbo.CadastrosFinanceiros c ON c.Id=l.CategoriaId
+    WHERE s.UsuarioId=${u.id}
+      AND s.Regra='RECORRENTE'
+      AND LOWER(t.Nome)=N'despesa'
+      AND s.VigenciaInicial<'${v}'
+      AND (s.CanceladaAPartirDe IS NULL OR s.CanceladaAPartirDe>'${v}')
+      AND NOT EXISTS(
+        SELECT 1 FROM dbo.ExcecoesRecorrencia e
+        WHERE e.UsuarioId=${u.id}
+          AND e.SerieId=s.Id
+          AND e.Vigencia='${v}'
+          AND e.Acao='EXCLUIR'
+      )
+      AND NOT EXISTS(
+        SELECT 1 FROM dbo.Lancamentos ex
+        WHERE ex.UsuarioId=${u.id}
+          AND ex.SerieId=s.Id
+          AND ex.Vigencia='${v}'
+      )
+) x
+ORDER BY Valor DESC
+`);
+
+return send(res,200,{
+    ...result[0],
+    Anterior:{
+        Receitas:Number(anterior[0]?.Receitas||0),
+        Despesas:Number(anterior[0]?.Despesas||0),
+        Saldo:Number(anterior[0]?.Saldo||0)
+    },
+    CategoriasDespesas:categoriasDespesas.map(x=>({
+        Categoria:x.Categoria,
+        Valor:Number(x.Valor||0)
+    })),
+    MaioresDespesas:maioresDespesas.map(x=>({
+        Descricao:x.Descricao,
+        Categoria:x.Categoria,
+        Valor:Number(x.Valor||0)
+    }))
+});
+
     }
 
-    return send(res, 404, {
-        error:
-            'Não encontrado.'
-    });
+    return send(res,404,{error:'Não encontrado.'});
 }
 
 /* =========================================================

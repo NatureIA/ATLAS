@@ -1,0 +1,36 @@
+name: Deploy ATLAS to MonsterASP
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+concurrency:
+  group: atlas-production
+  cancel-in-progress: true
+jobs:
+  deploy:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Install production dependencies
+        run: npm ci --omit=dev
+      - name: Install Web Deploy
+        shell: powershell
+        run: choco install webdeploy -y --no-progress
+      - name: Deploy to MonsterASP
+        shell: powershell
+        env:
+          WEBSITE_NAME: ${{ secrets.WEBSITE_NAME }}
+          SERVER_COMPUTER_NAME: ${{ secrets.SERVER_COMPUTER_NAME }}
+          SERVER_USERNAME: ${{ secrets.SERVER_USERNAME }}
+          SERVER_PASSWORD: ${{ secrets.SERVER_PASSWORD }}
+        run: |
+          $msdeploy = "$env:ProgramFiles\IIS\Microsoft Web Deploy V3\msdeploy.exe"
+          if (!(Test-Path $msdeploy)) { $msdeploy = "$env:ProgramFiles(x86)\IIS\Microsoft Web Deploy V3\msdeploy.exe" }
+          if (!(Test-Path $msdeploy)) { throw "MSDeploy nao encontrado." }
+          & $msdeploy -verb:sync -source:contentPath="${{ github.workspace }}" -dest:auto,computerName="$env:SERVER_COMPUTER_NAME",userName="$env:SERVER_USERNAME",password="$env:SERVER_PASSWORD",authType="Basic",includeAcls="False" -setParam:name="IIS Web Application Name",value="$env:WEBSITE_NAME" -enableRule:AppOffline -retryAttempts:3 -retryInterval:5000 -allowUntrusted

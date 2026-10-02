@@ -18,6 +18,11 @@ jobs:
           node-version: 20
       - name: Install production dependencies
         run: npm install --omit=dev
+      - name: Prepare deployment package
+        shell: powershell
+        run: |
+          New-Item -ItemType Directory -Force -Path publish | Out-Null
+          Get-ChildItem -Force | Where-Object { $_.Name -notin @("publish", ".git", ".github") } | Copy-Item -Destination publish -Recurse -Force
       - name: Deploy to MonsterASP.NET via WebDeploy
         uses: rasmusbuchholdt/simply-web-deploy@2.1.0
         with:

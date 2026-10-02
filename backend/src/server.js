@@ -301,6 +301,14 @@ CREATE TABLE dbo.Lancamentos(
     CriadoEm DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME()
 );
 
+IF OBJECT_ID('dbo.RecorrenciaExcecoes') IS NULL
+CREATE TABLE dbo.RecorrenciaExcecoes(
+    SerieId UNIQUEIDENTIFIER NOT NULL,
+    UsuarioId INT NOT NULL,
+    Vigencia DATE NOT NULL,
+    PRIMARY KEY(SerieId,Vigencia)
+);
+
 IF OBJECT_ID('dbo.AuditLog') IS NULL
 CREATE TABLE dbo.AuditLog(
     Id BIGINT IDENTITY PRIMARY KEY,

@@ -17,7 +17,7 @@ jobs:
         with:
           node-version: 20
       - name: Install production dependencies
-        run: npm ci --omit=dev
+        run: npm install --omit=dev
       - name: Validate application
         shell: powershell
         run: |
@@ -28,7 +28,8 @@ jobs:
         shell: powershell
         run: |
           New-Item -ItemType Directory -Force -Path publish | Out-Null
-          Copy-Item server.js,web.config,package.json,package-lock.json -Destination publish -Force
+          Copy-Item server.js,web.config,package.json -Destination publish -Force
+          if (Test-Path package-lock.json) { Copy-Item package-lock.json -Destination publish -Force }
           New-Item -ItemType Directory -Force -Path publish\backend\src | Out-Null
           Copy-Item backend\src\server.js -Destination publish\backend\src -Force
           Copy-Item public -Destination publish -Recurse -Force

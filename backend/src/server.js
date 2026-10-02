@@ -244,7 +244,9 @@ function send(
 async function init() {
 
     if (!CONNECTION_STRING) {
-        throw Error('Configure ConnectionStrings__DefaultConnection no MonsterASP.');
+        throw Error(
+            'Configure ConnectionStrings__DefaultConnection no MonsterASP.'
+        );
     }
 
     await getPool();

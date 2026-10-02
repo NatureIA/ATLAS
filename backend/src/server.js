@@ -982,3 +982,245 @@ VALUES(
 
         return send(res, 201, {
             ok: true
+        });
+    }
+
+    /* DASHBOARD */
+
+    if (
+        url.pathname ===
+        '/api/dashboard'
+    ) {
+
+        const v = month(
+            url.searchParams.get(
+                'vigencia'
+            ) || ''
+        );
+
+        if (!v) {
+
+            return send(res, 400, {
+                error:
+                    'Vigência inválida.'
+            });
+        }
+
+        const result = await sql(`
+SELECT
+    COUNT(*) Quantidade,
+    COALESCE(
+        SUM(Valor),
+        0
+    ) Movimentacao
+FROM (
+    SELECT
+        l.Id,
+        l.Valor
+    FROM dbo.Lancamentos l
+    WHERE
+        l.UsuarioId=${u.id}
+        AND l.Vigencia='${v}'
+
+    UNION ALL
+
+    SELECT
+        l.Id,
+        l.Valor
+    FROM dbo.SeriesFinanceiras s
+
+    JOIN dbo.Lancamentos l
+        ON l.SerieId=s.Id
+        AND l.Vigencia=s.VigenciaInicial
+
+    WHERE
+        s.UsuarioId=${u.id}
+        AND s.Regra='RECORRENTE'
+        AND s.VigenciaInicial<'${v}'
+        AND (
+            s.CanceladaAPartirDe IS NULL
+            OR s.CanceladaAPartirDe>'${v}'
+        )
+) x
+`);
+
+        return send(
+            res,
+            200,
+            result[0]
+        );
+    }
+
+    return send(res, 404, {
+        error:
+            'Não encontrado.'
+    });
+}
+
+/* =========================================================
+   ARQUIVOS ESTÁTICOS
+   ========================================================= */
+
+function staticFile(req, res) {
+
+    let p = new URL(
+        req.url,
+        'http://atlas'
+    ).pathname;
+
+    if (p === '/') {
+        p = '/index.html';
+    }
+
+    const f = path.join(
+        PUB,
+        path
+            .normalize(p)
+            .replace(
+                /^(\.\.[/\\])+/,
+                ''
+            )
+    );
+
+    if (
+        !f.startsWith(PUB) ||
+        !fs.existsSync(f) ||
+        fs.statSync(f).isDirectory()
+    ) {
+
+        return send(
+            res,
+            404,
+            'Não encontrado.',
+            'text/plain; charset=utf-8'
+        );
+    }
+
+    const ext =
+        path.extname(f);
+
+    const types = {
+        '.html':
+            'text/html; charset=utf-8',
+        '.css':
+            'text/css; charset=utf-8',
+        '.js':
+            'application/javascript; charset=utf-8'
+    };
+
+    res.writeHead(200, {
+        'Content-Type':
+            types[ext] ||
+            'application/octet-stream'
+    });
+
+    fs.createReadStream(f).pipe(res);
+}
+
+/* =========================================================
+   START ATLAS
+   ========================================================= */
+
+let ready = false;
+let bootError = null;
+
+init()
+    .then(() => {
+
+        ready = true;
+
+        console.log(
+            'ATLAS inicializado com sucesso.'
+        );
+
+    })
+    .catch(e => {
+
+        bootError = e;
+
+        console.error(
+            'ERRO NA INICIALIZAÇÃO DO ATLAS:'
+        );
+
+        console.error(e);
+    });
+
+http
+    .createServer(
+        async (req, res) => {
+
+            try {
+
+                if (!ready) {
+
+                    if (bootError) {
+
+                        return send(
+                            res,
+                            500,
+                            {
+                                error:
+                                    bootError.message
+                            }
+                        );
+                    }
+
+                    return send(
+                        res,
+                        503,
+                        {
+                            error:
+                                'ATLAS iniciando.'
+                        }
+                    );
+                }
+
+                const u =
+                    user(req);
+
+                if (
+                    req.url.startsWith(
+                        '/api/'
+                    )
+                ) {
+
+                    return await api(
+                        req,
+                        res,
+                        u
+                    );
+                }
+
+                return staticFile(
+                    req,
+                    res
+                );
+
+            } catch (e) {
+
+                console.error(e);
+
+                return send(
+                    res,
+                    500,
+                    {
+                        error:
+                            'Erro interno do ATLAS.',
+                        detail:
+                            e.message
+                    }
+                );
+            }
+        }
+    )
+    .listen(
+        PORT,
+        () => {
+
+            console.log(
+                'ATLAS online na porta ' +
+                PORT
+            );
+        }
+    );
+    );

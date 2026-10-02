@@ -1066,49 +1066,31 @@ ELSE INSERT dbo.Lancamentos(UsuarioId,TipoId,CategoriaId,FormaPagamentoId,ComoSe
             });
         }
 
-        const result = await sql(`
-SELECT
-    COUNT(*) Quantidade,
-    COALESCE(
-        SUM(Valor),
-        0
-    ) Movimentacao
-FROM (
-    SELECT
-        l.Id,
-        l.Valor
-    FROM dbo.Lancamentos l
-    WHERE
-        l.UsuarioId=${u.id}
-        AND l.Vigencia='${v}'
-
-    UNION ALL
-
-    SELECT
-        l.Id,
-        l.Valor
-    FROM dbo.SeriesFinanceiras s
-
-    JOIN dbo.Lancamentos l
-        ON l.SerieId=s.Id
-        AND l.Vigencia=s.VigenciaInicial
-
-    WHERE
-        s.UsuarioId=${u.id}
-        AND s.Regra='RECORRENTE'
-        AND s.VigenciaInicial<'${v}'
-        AND (
-            s.CanceladaAPartirDe IS NULL
-            OR s.CanceladaAPartirDe>'${v}'
-        )
-) x
-`);
-
-        return send(
-            res,
-            200,
-            result[0]
-        );
+        const itens = await sql(\`
+SELECT l.Valor,t.Nome Tipo,c.Nome Categoria
+FROM dbo.Lancamentos l
+JOIN dbo.CadastrosFinanceiros t ON t.Id=l.TipoId
+JOIN dbo.CadastrosFinanceiros c ON c.Id=l.CategoriaId
+WHERE l.UsuarioId=\${u.id} AND l.Vigencia='\${v}'
+UNION ALL
+SELECT l.Valor,t.Nome Tipo,c.Nome Categoria
+FROM dbo.SeriesFinanceiras s
+JOIN dbo.Lancamentos l ON l.SerieId=s.Id AND l.Vigencia=s.VigenciaInicial
+JOIN dbo.CadastrosFinanceiros t ON t.Id=l.TipoId
+JOIN dbo.CadastrosFinanceiros c ON c.Id=l.CategoriaId
+WHERE s.UsuarioId=\${u.id} AND s.Regra='RECORRENTE' AND s.VigenciaInicial<'\${v}'
+AND (s.CanceladaAPartirDe IS NULL OR s.CanceladaAPartirDe>'\${v}')
+AND NOT EXISTS(SELECT 1 FROM dbo.Lancamentos lx WHERE lx.SerieId=s.Id AND lx.Vigencia='\${v}')
+AND NOT EXISTS(SELECT 1 FROM dbo.RecorrenciaExcecoes ex WHERE ex.SerieId=s.Id AND ex.UsuarioId=\${u.id} AND ex.Vigencia='\${v}')
+\`);
+        let receitas=0,despesas=0,economia=0; const cats={};
+        for(const x of itens){
+            const n=String(x.Tipo||'').toLowerCase(),val=Number(x.Valor||0);
+            if(n==='receita') receitas+=val;
+            else if(n==='despesa'){despesas+=val;cats[x.Categoria]=(cats[x.Categoria]||0)+val;}
+            else if(n==='economia') economia+=val;
+        }
+        return send(res,200,{Quantidade:itens.length,Receitas:receitas,Despesas:despesas,Economia:economia,Saldo:receitas-despesas,CategoriasDespesas:Object.entries(cats).map(([Categoria,Valor])=>({Categoria,Valor})).sort((a,b)=>b.Valor-a.Valor)});
     }
 
     return send(res, 404, {

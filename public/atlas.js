@@ -998,3 +998,748 @@ btnSalvar.textContent='Salvando...';
     };
 
     toggle();
+}
+
+function configurarCadastros(){
+    document
+    .querySelectorAll('select[data-g]')
+    .forEach(s=>{
+        s.onchange=()=>{
+            if(s.value==='new'){
+                abrirNovoCadastro(s);
+                return;
+            }
+
+            toggle();
+        };
+    });
+}
+
+function abrirNovoCadastro(select){
+    const grupo=+select.dataset.g;
+
+    abrirModal(`
+        <div class="atlas-modal">
+            <div class="atlas-modal-head">
+                <div>
+                    <h2>Nova opção</h2>
+                    <p>Adicione uma nova opção ao seu cadastro financeiro.</p>
+                </div>
+
+                <button
+                    type="button"
+                    class="atlas-modal-close"
+                    onclick="fecharModal()"
+                >
+                    ×
+                </button>
+            </div>
+
+            <div class="atlas-modal-body">
+                <label style="display:flex;flex-direction:column;gap:8px;color:#a5abba;font-size:13px">
+                    Nome
+                    <input
+                        id="novoCadastroNome"
+                        maxlength="100"
+                        autocomplete="off"
+                    >
+                </label>
+
+                <div
+                    id="atlasModalMessage"
+                    class="atlas-modal-message"
+                ></div>
+            </div>
+
+            <div class="atlas-modal-footer">
+                <button
+                    type="button"
+                    class="atlas-btn-secondary"
+                    onclick="cancelarNovoCadastro()"
+                >
+                    Cancelar
+                </button>
+
+                <button
+                    type="button"
+                    class="atlas-btn-primary"
+                    onclick="salvarNovoCadastro(${grupo})"
+                >
+                    Criar opção
+                </button>
+            </div>
+        </div>
+    `);
+
+    modalAtual={
+        tipo:'NOVO_CADASTRO',
+        select
+    };
+
+    setTimeout(()=>{
+        document.querySelector('#novoCadastroNome')?.focus();
+    },0);
+}
+
+function cancelarNovoCadastro(){
+    if(modalAtual?.select){
+        modalAtual.select.value='';
+    }
+
+    fecharModal();
+}
+
+async function salvarNovoCadastro(grupo){
+    const input=document.querySelector('#novoCadastroNome');
+    const nome=String(input?.value||'').trim();
+
+
+const btnCriar=document.querySelector('.atlas-modal-footer .atlas-btn-primary');
+
+if(btnCriar?.disabled){
+    return;
+}
+
+if(btnCriar){
+    btnCriar.disabled=true;
+    btnCriar.textContent='Criando...';
+}
+
+
+
+    if(!nome){
+        mensagemModal('Informe o nome da nova opção.');
+        return;
+    }
+
+const normalizarNome=v=>
+    String(v||'')
+        .replace(/\s+/g,' ')
+        .trim()
+        .toLowerCase();
+
+const duplicado=cad.some(x=>
+    +x.Grupo===+grupo &&
+    normalizarNome(x.Nome)===normalizarNome(nome)
+);
+
+if(duplicado){
+    mensagemModal('Essa opção já existe.');
+
+    if(btnCriar){
+        btnCriar.disabled=false;
+        btnCriar.textContent='Criar opção';
+    }
+
+    return;
+}
+
+
+
+    try{
+        const x=await api('/api/cadastros',{
+            method:'POST',
+            body:JSON.stringify({
+                grupo,
+                nome
+            })
+        });
+
+        const select=modalAtual?.select;
+
+        if(select){
+            const o=new Option(
+                x.Nome,
+                x.Id
+            );
+
+            select.add(
+                o,
+                select.options.length-1
+            );
+
+            select.value=x.Id;
+        }
+
+        cad=await api('/api/cadastros');
+
+        fecharModal();
+        toggle();
+
+    }catch(e){
+        mensagemModal(e.message);
+
+        if(btnCriar){
+            btnCriar.disabled=false;
+            btnCriar.textContent='Criar opção';
+        }
+    }
+}
+
+function blocoEscopo(x,acao){
+    const tipo=tipoLancamento(x);
+
+    if(tipo==='UNICO'){
+        return '';
+    }
+
+    if(tipo==='PARCELADO'){
+        if(acao==='EDITAR'){
+            return `
+                <div style="margin-top:22px">
+                    <p class="atlas-scope-title">
+                        Onde aplicar esta alteração?
+                    </p>
+
+                    <div class="atlas-scope">
+                        <label class="atlas-scope-option selected">
+                            <input
+                                type="radio"
+                                name="escopo"
+                                value="UNICO"
+                                checked
+                                onchange="selecionarEscopoVisual()"
+                            >
+
+                            <span class="atlas-scope-copy">
+                                <strong>Somente esta parcela</strong>
+                                <span>
+                                    Altera apenas a parcela exibida em ${vigenciaAtual}.
+                                    As demais parcelas permanecem como estão.
+                                </span>
+                            </span>
+                        </label>
+
+                        <label class="atlas-scope-option">
+                            <input
+                                type="radio"
+                                name="escopo"
+                                value="PROXIMOS"
+                                onchange="selecionarEscopoVisual()"
+                            >
+
+                            <span class="atlas-scope-copy">
+                                <strong>Esta parcela e as próximas</strong>
+                                <span>
+                                    Aplica a alteração nesta parcela e em todas
+                                    as parcelas posteriores.
+                                </span>
+                            </span>
+                        </label>
+                    </div>
+                </div>
+            `;
+        }
+
+        return `
+            <div style="margin-top:22px">
+                <p class="atlas-scope-title">
+                    O que deseja excluir?
+                </p>
+
+                <div class="atlas-scope">
+                    <label class="atlas-scope-option selected">
+                        <input
+                            type="radio"
+                            name="escopo"
+                            value="UNICO"
+                            checked
+                            onchange="selecionarEscopoVisual()"
+                        >
+
+                        <span class="atlas-scope-copy">
+                            <strong>Somente esta parcela</strong>
+                            <span>
+                                Remove apenas a parcela ${x.ParcelaAtual}/${x.TotalParcelas}.
+                                As demais parcelas continuam normalmente.
+                            </span>
+                        </span>
+                    </label>
+
+                    <label class="atlas-scope-option">
+                        <input
+                            type="radio"
+                            name="escopo"
+                            value="PROXIMOS"
+                            onchange="selecionarEscopoVisual()"
+                        >
+
+                        <span class="atlas-scope-copy">
+                            <strong>Esta parcela e as próximas</strong>
+                            <span>
+                                Remove esta parcela e todas as parcelas
+                                posteriores desta compra.
+                            </span>
+                        </span>
+                    </label>
+                </div>
+            </div>
+        `;
+    }
+
+    if(acao==='EDITAR'){
+        return `
+            <div style="margin-top:22px">
+                <p class="atlas-scope-title">
+                    Onde aplicar esta alteração?
+                </p>
+
+                <div class="atlas-scope">
+                    <label class="atlas-scope-option selected">
+                        <input
+                            type="radio"
+                            name="escopo"
+                            value="UNICO"
+                            checked
+                            onchange="selecionarEscopoVisual()"
+                        >
+
+                        <span class="atlas-scope-copy">
+                            <strong>Somente ${vigenciaAtual}</strong>
+                            <span>
+                                Altera apenas este mês. Os próximos meses
+                                continuam com os dados atuais da recorrência.
+                            </span>
+                        </span>
+                    </label>
+
+                    <label class="atlas-scope-option">
+                        <input
+                            type="radio"
+                            name="escopo"
+                            value="PROXIMOS"
+                            onchange="selecionarEscopoVisual()"
+                        >
+
+                        <span class="atlas-scope-copy">
+                            <strong>${vigenciaAtual} e os próximos meses</strong>
+                            <span>
+                                A alteração passa a valer neste mês e permanece
+                                nos próximos lançamentos da recorrência.
+                            </span>
+                        </span>
+                    </label>
+                </div>
+            </div>
+        `;
+    }
+
+    return `
+        <div style="margin-top:22px">
+            <p class="atlas-scope-title">
+                O que deseja fazer?
+            </p>
+
+            <div class="atlas-scope">
+                <label class="atlas-scope-option selected">
+                    <input
+                        type="radio"
+                        name="escopo"
+                        value="UNICO"
+                        checked
+                        onchange="selecionarEscopoVisual()"
+                    >
+
+                    <span class="atlas-scope-copy">
+                        <strong>Excluir somente ${vigenciaAtual}</strong>
+                        <span>
+                            Remove somente este mês. A recorrência continuará
+                            normalmente nos meses seguintes.
+                        </span>
+                    </span>
+                </label>
+
+                <label class="atlas-scope-option">
+                    <input
+                        type="radio"
+                        name="escopo"
+                        value="PROXIMOS"
+                        onchange="selecionarEscopoVisual()"
+                    >
+
+                    <span class="atlas-scope-copy">
+                        <strong>Cancelar a partir de ${vigenciaAtual}</strong>
+                        <span>
+                            Remove este mês e encerra todos os próximos
+                            lançamentos desta recorrência.
+                        </span>
+                    </span>
+                </label>
+            </div>
+        </div>
+    `;
+}
+
+function editarLancamento(i){
+    const x=lancamentosAtuais[i];
+
+    if(!x){
+        return;
+    }
+
+    modalAtual={
+        tipo:'EDITAR',
+        indice:i,
+        lancamento:x
+    };
+
+    abrirModal(`
+        <div class="atlas-modal">
+            <div class="atlas-modal-head">
+                <div>
+                    <h2>Editar lançamento</h2>
+                    <p>
+                        Revise as informações antes de salvar a alteração.
+                    </p>
+                </div>
+
+                <button
+                    type="button"
+                    class="atlas-modal-close"
+                    onclick="fecharModal()"
+                >
+                    ×
+                </button>
+            </div>
+
+            <form id="atlasEditForm">
+                <div class="atlas-modal-body">
+
+                    <div class="atlas-modal-item">
+                        <strong>${escapeHtml(x.Descricao)}</strong>
+                        <span>
+                            ${vigenciaAtual} · ${valorBRL(x.Valor)}
+                        </span>
+                    </div>
+
+                    <div class="atlas-modal-grid">
+                        <label>
+                            Tipo
+                            <select name="tipoId" required>
+                                ${opts(1,x.TipoId)}
+                            </select>
+                        </label>
+
+                        <label>
+                            Categoria
+                            <select name="categoriaId" required>
+                                ${opts(2,x.CategoriaId)}
+                            </select>
+                        </label>
+
+                        <label>
+                            Forma de pagamento
+                            <select name="formaPagamentoId" required>
+                                ${opts(3,x.FormaPagamentoId)}
+                            </select>
+                        </label>
+
+                        <label>
+                            Como será pago
+                            <select
+                                name="comoSeraPagoId"
+                                required
+                                ${tipoLancamento(x)!=='UNICO'?'disabled':''}
+                            >
+                                ${opts(4,x.ComoSeraPagoId)}
+                            </select>
+                        </label>
+
+                        <label class="atlas-full">
+                            Descrição
+                            <input
+                                name="descricao"
+                                value="${escapeHtml(x.Descricao)}"
+                                maxlength="250"
+                                required
+                            >
+                        </label>
+
+                        <label>
+                            Valor
+                            <input
+                                name="valor"
+                                type="number"
+                                min=".01"
+                                step=".01"
+                                value="${Number(x.Valor).toFixed(2)}"
+                                required
+                            >
+                        </label>
+
+                        <label>
+                            Vigência
+                            <input
+                                name="vigencia"
+                                value="${vigenciaAtual}"
+                                ${tipoLancamento(x)!=='UNICO'?'disabled':''}
+                           >
+                        </label>
+                    </div>
+
+                    ${blocoEscopo(x,'EDITAR')}
+
+                    <div
+                        id="atlasModalMessage"
+                        class="atlas-modal-message"
+                    ></div>
+                </div>
+
+                <div class="atlas-modal-footer">
+                    <button
+                        type="button"
+                        class="atlas-btn-secondary"
+                        onclick="fecharModal()"
+                    >
+                        Cancelar
+                    </button>
+
+                    <button
+                        type="submit"
+                        class="atlas-btn-primary"
+                        id="atlasSalvarEdicao"
+                    >
+                        Salvar alteração
+                    </button>
+                </div>
+            </form>
+        </div>
+    `);
+
+    document.querySelector('#atlasEditForm').onsubmit=salvarEdicao;
+}
+
+async function salvarEdicao(e){
+    e.preventDefault();
+
+    const x=modalAtual?.lancamento;
+
+    if(!x){
+        return;
+    }
+
+    const form=e.currentTarget;
+    const fd=new FormData(form);
+
+    const descricao=String(fd.get('descricao')||'').trim();
+    const valor=Number(fd.get('valor'));
+
+    if(!descricao){
+        mensagemModal('Informe a descrição do lançamento.');
+        return;
+    }
+
+    if(!valor||valor<=0){
+        mensagemModal('Informe um valor válido.');
+        return;
+    }
+
+    const escopo=
+        form.querySelector('[name="escopo"]:checked')?.value
+        ||
+        'UNICO';
+
+    const comoSeraPagoId=
+        tipoLancamento(x)!=='UNICO'
+        ?x.ComoSeraPagoId
+        :fd.get('comoSeraPagoId');
+
+    const btn=document.querySelector('#atlasSalvarEdicao');
+
+    btn.disabled=true;
+    btn.textContent='Salvando...';
+
+    try{
+        await api('/api/lancamentos/editar',{
+            method:'POST',
+            body:JSON.stringify({
+                id:x.Id,
+                tipoId:+fd.get('tipoId'),
+                categoriaId:+fd.get('categoriaId'),
+                formaPagamentoId:+fd.get('formaPagamentoId'),
+                comoSeraPagoId:+comoSeraPagoId,
+                descricao,
+                valor,
+                vigencia:tipoLancamento(x)==='UNICO'
+                    ?String(fd.get('vigencia')||vigenciaAtual).trim()
+                    :vigenciaAtual,
+                escopo
+            })
+        });
+
+        fecharModal();
+
+        await lancamentos(vigenciaAtual);
+
+    }catch(e){
+        mensagemModal(e.message);
+
+        btn.disabled=false;
+        btn.textContent='Salvar alteração';
+    }
+}
+
+function excluirLancamento(i){
+    const x=lancamentosAtuais[i];
+
+    if(!x){
+        return;
+    }
+
+    modalAtual={
+        tipo:'EXCLUIR',
+        indice:i,
+        lancamento:x
+    };
+
+    const tipo=tipoLancamento(x);
+
+    let titulo='Excluir lançamento';
+    let descricao='Esta ação removerá o lançamento selecionado.';
+
+    if(tipo==='PARCELADO'){
+        titulo='Excluir parcela';
+        descricao='Escolha exatamente quais parcelas devem ser removidas.';
+    }
+
+    if(tipo==='RECORRENTE'){
+        titulo='Cancelar recorrência';
+        descricao='Escolha se deseja remover somente este mês ou encerrar a recorrência.';
+    }
+
+    abrirModal(`
+        <div class="atlas-modal">
+            <div class="atlas-modal-head">
+                <div>
+                    <h2>${titulo}</h2>
+                    <p>${descricao}</p>
+                </div>
+
+                <button
+                    type="button"
+                    class="atlas-modal-close"
+                    onclick="fecharModal()"
+                >
+                    ×
+                </button>
+            </div>
+
+            <div class="atlas-modal-body">
+
+                <div class="atlas-modal-item">
+                    <strong>${escapeHtml(x.Descricao)}</strong>
+                    <span>
+                        ${vigenciaAtual} · ${valorBRL(x.Valor)}
+                        ${
+                            tipo==='PARCELADO'
+                            ?` · Parcela ${x.ParcelaAtual}/${x.TotalParcelas}`
+                            :''
+                        }
+                    </span>
+                </div>
+
+                ${blocoEscopo(x,'EXCLUIR')}
+
+                ${
+                    tipo==='UNICO'
+                    ?`
+                        <div class="atlas-danger-box">
+                            Este lançamento será removido de
+                            <strong>${vigenciaAtual}</strong>.
+                            Esta operação não altera outros lançamentos.
+                        </div>
+                    `
+                    :''
+                }
+
+                <div
+                    id="atlasModalMessage"
+                    class="atlas-modal-message"
+                ></div>
+            </div>
+
+            <div class="atlas-modal-footer">
+                <button
+                    type="button"
+                    class="atlas-btn-secondary"
+                    onclick="fecharModal()"
+                >
+                    Voltar
+                </button>
+
+                <button
+                    type="button"
+                    class="atlas-btn-danger"
+                    id="atlasConfirmarExclusao"
+                    onclick="confirmarExclusao()"
+                >
+                    ${
+                        tipo==='RECORRENTE'
+                        ?'Confirmar'
+                        :'Excluir'
+                    }
+                </button>
+            </div>
+        </div>
+    `);
+}
+
+async function confirmarExclusao(){
+    const x=modalAtual?.lancamento;
+
+    if(!x){
+        return;
+    }
+
+    const escopo=
+        document.querySelector('[name="escopo"]:checked')?.value
+        ||
+        'UNICO';
+
+    const btn=document.querySelector('#atlasConfirmarExclusao');
+
+    btn.disabled=true;
+    btn.textContent='Processando...';
+
+    try{
+        await api('/api/lancamentos/excluir',{
+            method:'POST',
+            body:JSON.stringify({
+                id:x.Id,
+                vigencia:vigenciaAtual,
+                escopo
+            })
+        });
+
+        fecharModal();
+
+        await lancamentos(vigenciaAtual);
+
+    }catch(e){
+        mensagemModal(e.message);
+
+        btn.disabled=false;
+        btn.textContent='Confirmar';
+    }
+}
+
+function toggle(){
+    const s=document.querySelector('[name=comoSeraPagoId]');
+    const b=document.querySelector('#pb');
+
+    if(!s||!b){
+        return;
+    }
+
+    const p=
+        s.options[s.selectedIndex]
+        ?.text
+        .toLowerCase()==='parcelado';
+
+    b.style.display=p?'flex':'none';
+
+    b.querySelector('input').required=p;
+}
+
+instalarModal();
+start();

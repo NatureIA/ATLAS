@@ -1001,31 +1001,31 @@ VALUES(
         const b=await body(req), id=+b.id, v=month(b.vigencia||''), valor=Number(b.valor);
         const scope=b.escopo==='PROXIMOS'?'PROXIMOS':'UNICO';
         if(!Number.isInteger(id)||!v||!valor||valor<=0||!String(b.descricao||'').trim()) return send(res,400,{error:'Dados inválidos para edição.'});
-        const a=(await sql(\`SELECT TOP 1 l.*,s.Regra FROM dbo.Lancamentos l LEFT JOIN dbo.SeriesFinanceiras s ON s.Id=l.SerieId AND s.UsuarioId=\${u.id} WHERE l.Id=\${id} AND l.UsuarioId=\${u.id}\`))[0];
+        const a=(await sql(`SELECT TOP 1 l.*,s.Regra FROM dbo.Lancamentos l LEFT JOIN dbo.SeriesFinanceiras s ON s.Id=l.SerieId AND s.UsuarioId=${u.id} WHERE l.Id=${id} AND l.UsuarioId=${u.id}`))[0];
         if(!a) return send(res,404,{error:'Lançamento não encontrado.'});
         const ti=+b.tipoId,ca=+b.categoriaId,fp=+b.formaPagamentoId,cp=+b.comoSeraPagoId;
         if(![ti,ca,fp,cp].every(Number.isInteger)) return send(res,400,{error:'Seleções inválidas.'});
-        const set=\`TipoId=\${ti},CategoriaId=\${ca},FormaPagamentoId=\${fp},ComoSeraPagoId=\${cp},Descricao=N'\${esc(b.descricao)}',Valor=\${valor.toFixed(2)}\`;
+        const set=`TipoId=${ti},CategoriaId=${ca},FormaPagamentoId=${fp},ComoSeraPagoId=${cp},Descricao=N'${esc(b.descricao)}',Valor=${valor.toFixed(2)}`;
         if(!a.SerieId) {
-            await exec(\`UPDATE dbo.Lancamentos SET \${set},Vigencia='\${v}' WHERE Id=\${id} AND UsuarioId=\${u.id}\`);
+            await exec(`UPDATE dbo.Lancamentos SET ${set},Vigencia='${v}' WHERE Id=${id} AND UsuarioId=${u.id}`);
         } else if(a.Regra==='PARCELADO') {
             await exec(scope==='PROXIMOS'
-                ?\`UPDATE dbo.Lancamentos SET \${set} WHERE UsuarioId=\${u.id} AND SerieId='\${a.SerieId}' AND Vigencia>='\${v}'\`
-                :\`UPDATE dbo.Lancamentos SET \${set} WHERE Id=\${id} AND UsuarioId=\${u.id}\`);
+                ?`UPDATE dbo.Lancamentos SET ${set} WHERE UsuarioId=${u.id} AND SerieId='${a.SerieId}' AND Vigencia>='${v}'`
+                :`UPDATE dbo.Lancamentos SET ${set} WHERE Id=${id} AND UsuarioId=${u.id}`);
         } else if(a.Regra==='RECORRENTE') {
             if(scope==='PROXIMOS') {
                 const ns=crypto.randomUUID();
-                await exec(\`UPDATE dbo.SeriesFinanceiras SET CanceladaAPartirDe='\${v}' WHERE Id='\${a.SerieId}' AND UsuarioId=\${u.id};
-INSERT dbo.SeriesFinanceiras(Id,UsuarioId,Regra,VigenciaInicial) VALUES('\${ns}',\${u.id},'RECORRENTE','\${v}');
-INSERT dbo.Lancamentos(UsuarioId,TipoId,CategoriaId,FormaPagamentoId,ComoSeraPagoId,Descricao,Valor,Vigencia,SerieId) VALUES(\${u.id},\${ti},\${ca},\${fp},\${cp},N'\${esc(b.descricao)}',\${valor.toFixed(2)},'\${v}','\${ns}')\`);
+                await exec(`UPDATE dbo.SeriesFinanceiras SET CanceladaAPartirDe='${v}' WHERE Id='${a.SerieId}' AND UsuarioId=${u.id};
+INSERT dbo.SeriesFinanceiras(Id,UsuarioId,Regra,VigenciaInicial) VALUES('${ns}',${u.id},'RECORRENTE','${v}');
+INSERT dbo.Lancamentos(UsuarioId,TipoId,CategoriaId,FormaPagamentoId,ComoSeraPagoId,Descricao,Valor,Vigencia,SerieId) VALUES(${u.id},${ti},${ca},${fp},${cp},N'${esc(b.descricao)}',${valor.toFixed(2)},'${v}','${ns}')`);
             } else {
-                await exec(\`DELETE FROM dbo.RecorrenciaExcecoes WHERE SerieId='\${a.SerieId}' AND UsuarioId=\${u.id} AND Vigencia='\${v}';
-IF EXISTS(SELECT 1 FROM dbo.Lancamentos WHERE UsuarioId=\${u.id} AND SerieId='\${a.SerieId}' AND Vigencia='\${v}')
- UPDATE dbo.Lancamentos SET \${set} WHERE UsuarioId=\${u.id} AND SerieId='\${a.SerieId}' AND Vigencia='\${v}';
-ELSE INSERT dbo.Lancamentos(UsuarioId,TipoId,CategoriaId,FormaPagamentoId,ComoSeraPagoId,Descricao,Valor,Vigencia,SerieId) VALUES(\${u.id},\${ti},\${ca},\${fp},\${cp},N'\${esc(b.descricao)}',\${valor.toFixed(2)},'\${v}','\${a.SerieId}')\`);
+                await exec(`DELETE FROM dbo.RecorrenciaExcecoes WHERE SerieId='${a.SerieId}' AND UsuarioId=${u.id} AND Vigencia='${v}';
+IF EXISTS(SELECT 1 FROM dbo.Lancamentos WHERE UsuarioId=${u.id} AND SerieId='${a.SerieId}' AND Vigencia='${v}')
+ UPDATE dbo.Lancamentos SET ${set} WHERE UsuarioId=${u.id} AND SerieId='${a.SerieId}' AND Vigencia='${v}';
+ELSE INSERT dbo.Lancamentos(UsuarioId,TipoId,CategoriaId,FormaPagamentoId,ComoSeraPagoId,Descricao,Valor,Vigencia,SerieId) VALUES(${u.id},${ti},${ca},${fp},${cp},N'${esc(b.descricao)}',${valor.toFixed(2)},'${v}','${a.SerieId}')`);
             }
         }
-        await exec(\`INSERT dbo.AuditLog(UsuarioId,Acao,Dados) VALUES(\${u.id},N'EDITAR_LANCAMENTO',N'\${esc(b.descricao)}')\`);
+        await exec(`INSERT dbo.AuditLog(UsuarioId,Acao,Dados) VALUES(${u.id},N'EDITAR_LANCAMENTO',N'${esc(b.descricao)}')`);
         return send(res,200,{ok:true});
     }
 
@@ -1033,15 +1033,15 @@ ELSE INSERT dbo.Lancamentos(UsuarioId,TipoId,CategoriaId,FormaPagamentoId,ComoSe
     if (url.pathname === '/api/lancamentos/excluir' && req.method === 'POST') {
         const b=await body(req),id=+b.id,v=month(b.vigencia||''),scope=b.escopo==='PROXIMOS'?'PROXIMOS':'UNICO';
         if(!Number.isInteger(id)||!v) return send(res,400,{error:'Dados inválidos.'});
-        const a=(await sql(\`SELECT TOP 1 l.*,s.Regra FROM dbo.Lancamentos l LEFT JOIN dbo.SeriesFinanceiras s ON s.Id=l.SerieId AND s.UsuarioId=\${u.id} WHERE l.Id=\${id} AND l.UsuarioId=\${u.id}\`))[0];
+        const a=(await sql(`SELECT TOP 1 l.*,s.Regra FROM dbo.Lancamentos l LEFT JOIN dbo.SeriesFinanceiras s ON s.Id=l.SerieId AND s.UsuarioId=${u.id} WHERE l.Id=${id} AND l.UsuarioId=${u.id}`))[0];
         if(!a) return send(res,404,{error:'Lançamento não encontrado.'});
-        if(!a.SerieId) await exec(\`DELETE FROM dbo.Lancamentos WHERE Id=\${id} AND UsuarioId=\${u.id}\`);
-        else if(a.Regra==='PARCELADO') await exec(scope==='PROXIMOS'?\`DELETE FROM dbo.Lancamentos WHERE UsuarioId=\${u.id} AND SerieId='\${a.SerieId}' AND Vigencia>='\${v}'\`:\`DELETE FROM dbo.Lancamentos WHERE Id=\${id} AND UsuarioId=\${u.id}\`);
+        if(!a.SerieId) await exec(`DELETE FROM dbo.Lancamentos WHERE Id=${id} AND UsuarioId=${u.id}`);
+        else if(a.Regra==='PARCELADO') await exec(scope==='PROXIMOS'?`DELETE FROM dbo.Lancamentos WHERE UsuarioId=${u.id} AND SerieId='${a.SerieId}' AND Vigencia>='${v}'`:`DELETE FROM dbo.Lancamentos WHERE Id=${id} AND UsuarioId=${u.id}`);
         else if(a.Regra==='RECORRENTE') {
-            if(scope==='PROXIMOS') await exec(\`UPDATE dbo.SeriesFinanceiras SET CanceladaAPartirDe=DATEADD(month,1,'\${v}') WHERE Id='\${a.SerieId}' AND UsuarioId=\${u.id}\`);
-            else await exec(\`IF NOT EXISTS(SELECT 1 FROM dbo.RecorrenciaExcecoes WHERE SerieId='\${a.SerieId}' AND Vigencia='\${v}') INSERT dbo.RecorrenciaExcecoes(SerieId,UsuarioId,Vigencia) VALUES('\${a.SerieId}',\${u.id},'\${v}')\`);
+            if(scope==='PROXIMOS') await exec(`UPDATE dbo.SeriesFinanceiras SET CanceladaAPartirDe=DATEADD(month,1,'${v}') WHERE Id='${a.SerieId}' AND UsuarioId=${u.id}`);
+            else await exec(`IF NOT EXISTS(SELECT 1 FROM dbo.RecorrenciaExcecoes WHERE SerieId='${a.SerieId}' AND Vigencia='${v}') INSERT dbo.RecorrenciaExcecoes(SerieId,UsuarioId,Vigencia) VALUES('${a.SerieId}',${u.id},'${v}')`);
         }
-        await exec(\`INSERT dbo.AuditLog(UsuarioId,Acao,Dados) VALUES(\${u.id},N'EXCLUIR_LANCAMENTO',N'ID \${id}')\`);
+        await exec(`INSERT dbo.AuditLog(UsuarioId,Acao,Dados) VALUES(${u.id},N'EXCLUIR_LANCAMENTO',N'ID ${id}')`);
         return send(res,200,{ok:true});
     }
 
@@ -1066,23 +1066,23 @@ ELSE INSERT dbo.Lancamentos(UsuarioId,TipoId,CategoriaId,FormaPagamentoId,ComoSe
             });
         }
 
-        const itens = await sql(\`
+        const itens = await sql(`
 SELECT l.Valor,t.Nome Tipo,c.Nome Categoria
 FROM dbo.Lancamentos l
 JOIN dbo.CadastrosFinanceiros t ON t.Id=l.TipoId
 JOIN dbo.CadastrosFinanceiros c ON c.Id=l.CategoriaId
-WHERE l.UsuarioId=\${u.id} AND l.Vigencia='\${v}'
+WHERE l.UsuarioId=${u.id} AND l.Vigencia='${v}'
 UNION ALL
 SELECT l.Valor,t.Nome Tipo,c.Nome Categoria
 FROM dbo.SeriesFinanceiras s
 JOIN dbo.Lancamentos l ON l.SerieId=s.Id AND l.Vigencia=s.VigenciaInicial
 JOIN dbo.CadastrosFinanceiros t ON t.Id=l.TipoId
 JOIN dbo.CadastrosFinanceiros c ON c.Id=l.CategoriaId
-WHERE s.UsuarioId=\${u.id} AND s.Regra='RECORRENTE' AND s.VigenciaInicial<'\${v}'
-AND (s.CanceladaAPartirDe IS NULL OR s.CanceladaAPartirDe>'\${v}')
-AND NOT EXISTS(SELECT 1 FROM dbo.Lancamentos lx WHERE lx.SerieId=s.Id AND lx.Vigencia='\${v}')
-AND NOT EXISTS(SELECT 1 FROM dbo.RecorrenciaExcecoes ex WHERE ex.SerieId=s.Id AND ex.UsuarioId=\${u.id} AND ex.Vigencia='\${v}')
-\`);
+WHERE s.UsuarioId=${u.id} AND s.Regra='RECORRENTE' AND s.VigenciaInicial<'${v}'
+AND (s.CanceladaAPartirDe IS NULL OR s.CanceladaAPartirDe>'${v}')
+AND NOT EXISTS(SELECT 1 FROM dbo.Lancamentos lx WHERE lx.SerieId=s.Id AND lx.Vigencia='${v}')
+AND NOT EXISTS(SELECT 1 FROM dbo.RecorrenciaExcecoes ex WHERE ex.SerieId=s.Id AND ex.UsuarioId=${u.id} AND ex.Vigencia='${v}')
+`);
         let receitas=0,despesas=0,economia=0; const cats={};
         for(const x of itens){
             const n=String(x.Tipo||'').toLowerCase(),val=Number(x.Valor||0);

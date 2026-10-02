@@ -18,18 +18,10 @@ jobs:
           node-version: 20
       - name: Install production dependencies
         run: npm install --omit=dev
-      - name: Install Web Deploy
-        shell: powershell
-        run: choco install webdeploy -y --no-progress
-      - name: Deploy to MonsterASP
-        shell: powershell
-        env:
-          WEBSITE_NAME: site93273
-          SERVER_COMPUTER_NAME: https://site93273.siteasp.net:8172/msdeploy.axd?site=site93273
-          SERVER_USERNAME: site93273
-          SERVER_PASSWORD: ${{ secrets.SERVER_PASSWORD }}
-        run: |
-          $msdeploy = "$env:ProgramFiles\IIS\Microsoft Web Deploy V3\msdeploy.exe"
-          if (!(Test-Path $msdeploy)) { $msdeploy = "$env:ProgramFiles(x86)\IIS\Microsoft Web Deploy V3\msdeploy.exe" }
-          if (!(Test-Path $msdeploy)) { throw "MSDeploy nao encontrado." }
-          & $msdeploy -verb:sync -source:contentPath="${{ github.workspace }}" -dest:contentPath="$env:WEBSITE_NAME",computerName="$env:SERVER_COMPUTER_NAME",userName="$env:SERVER_USERNAME",password="$env:SERVER_PASSWORD",authType="Basic",includeAcls="False" -enableRule:AppOffline -retryAttempts:3 -retryInterval:5000 -allowUntrusted
+      - name: Deploy to MonsterASP.NET via WebDeploy
+        uses: rasmusbuchholdt/simply-web-deploy@2.1.0
+        with:
+          website-name: site93273
+          server-computer-name: https://site93273.siteasp.net:8172
+          server-username: site93273
+          server-password: ${{ secrets.SERVER_PASSWORD }}

@@ -17,12 +17,22 @@ jobs:
         with:
           node-version: 20
       - name: Install production dependencies
-        run: npm install --omit=dev
+        run: npm ci --omit=dev
+      - name: Validate application
+        shell: powershell
+        run: |
+          node --check server.js
+          node --check backend/src/server.js
+          node --check public/atlas.js
       - name: Prepare deployment package
         shell: powershell
         run: |
           New-Item -ItemType Directory -Force -Path publish | Out-Null
-          Get-ChildItem -Force | Where-Object { $_.Name -notin @("publish", ".git", ".github") } | Copy-Item -Destination publish -Recurse -Force
+          Copy-Item server.js,web.config,package.json,package-lock.json -Destination publish -Force
+          New-Item -ItemType Directory -Force -Path publish\backend\src | Out-Null
+          Copy-Item backend\src\server.js -Destination publish\backend\src -Force
+          Copy-Item public -Destination publish -Recurse -Force
+          Copy-Item node_modules -Destination publish -Recurse -Force
       - name: Deploy to MonsterASP.NET via WebDeploy
         uses: rasmusbuchholdt/simply-web-deploy@2.1.0
         with:

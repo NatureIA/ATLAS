@@ -732,6 +732,8 @@ WHERE
         OR s.CanceladaAPartirDe>'${v}'
     )
     AND '${v}'<>s.VigenciaInicial
+    AND NOT EXISTS(SELECT 1 FROM dbo.Lancamentos lx WHERE lx.SerieId=s.Id AND lx.Vigencia='${v}')
+    AND NOT EXISTS(SELECT 1 FROM dbo.RecorrenciaExcecoes ex WHERE ex.SerieId=s.Id AND ex.UsuarioId=${u.id} AND ex.Vigencia='${v}')
 `);
 
         return send(

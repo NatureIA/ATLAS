@@ -1,14 +1,1 @@
-{
-  "name": "atlas",
-  "version": "1.0.0",
-  "private": true,
-  "main": "backend/src/server.js",
-  "scripts": {
-    "start": "node backend/src/server.js",
-    "build": "node -e \"console.log('ATLAS build concluido')\""
-  },
-  "dependencies": {
-    "mssql": "^11.0.1"
-  },
-  "engines": { "node": ">=18" }
-}
+{"name":"atlas","version":"2.0.0","private":true,"main":"server.js","scripts":{"start":"node server.js","check":"node --check server.js && node --check backend/src/server.js && node --check public/atlas.js"},"dependencies":{"mssql":"^11.0.1"},"engines":{"node":">=20"}}

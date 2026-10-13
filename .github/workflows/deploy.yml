@@ -10,34 +10,28 @@ jobs:
   deploy:
     runs-on: windows-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - name: Install production dependencies
+      - name: Install dependencies
         run: npm install --omit=dev
-      - name: Validate application
+      - name: Validate source
+        run: npm run check
+      - name: Prepare deployment
         shell: powershell
         run: |
-          node --check server.js
-          node --check backend/src/server.js
-          node --check public/atlas.js
-      - name: Prepare deployment package
-        shell: powershell
-        run: |
-          New-Item -ItemType Directory -Force -Path publish | Out-Null
-          Copy-Item server.js,web.config,package.json -Destination publish -Force
-          if (Test-Path package-lock.json) { Copy-Item package-lock.json -Destination publish -Force }
-          New-Item -ItemType Directory -Force -Path publish\backend\src | Out-Null
-          Copy-Item backend\src\server.js -Destination publish\backend\src -Force
-          Copy-Item public -Destination publish -Recurse -Force
-          Copy-Item node_modules -Destination publish -Recurse -Force
-      - name: Deploy to MonsterASP.NET via WebDeploy
+          New-Item -ItemType Directory -Force publish | Out-Null
+          Copy-Item server.js,web.config,package.json -Destination publish
+          New-Item -ItemType Directory -Force publish\backend\src | Out-Null
+          Copy-Item backend\src\* -Destination publish\backend\src -Force
+          Copy-Item public -Destination publish -Recurse
+          Copy-Item node_modules -Destination publish -Recurse
+      - name: Deploy to MonsterASP
         uses: rasmusbuchholdt/simply-web-deploy@2.1.0
         with:
           website-name: ${{ secrets.WEBSITE_NAME }}
           server-computer-name: ${{ secrets.SERVER_COMPUTER_NAME }}
           server-username: ${{ secrets.SERVER_USERNAME }}
           server-password: ${{ secrets.SERVER_PASSWORD }}
+          source-path: '\publish\'

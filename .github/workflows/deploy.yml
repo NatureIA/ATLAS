@@ -1,33 +1,39 @@
-name: Deploy ATLAS to MonsterASP
+name: ATLAS - .NET 8 build and MonsterASP deployment
 on:
   push:
-    branches: [main]
+    branches: [main, atlas-dotnet-rebuild]
   workflow_dispatch:
+
+permissions:
+  contents: read
+
 concurrency:
-  group: atlas-production
+  group: atlas-deploy-${{ github.ref }}
   cancel-in-progress: true
+
 jobs:
-  deploy:
+  verify:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: .NET 8 SDK
+        uses: actions/setup-dotnet@v4
         with:
-          node-version: 20
-      - name: Install dependencies
-        run: npm install --omit=dev
-      - name: Validate source
-        run: npm run check
-      - name: Prepare deployment
-        shell: powershell
-        run: |
-          New-Item -ItemType Directory -Force publish | Out-Null
-          Copy-Item server.js,web.config,package.json -Destination publish
-          New-Item -ItemType Directory -Force publish\backend\src | Out-Null
-          Copy-Item backend\src\* -Destination publish\backend\src -Force
-          Copy-Item public -Destination publish -Recurse
-          Copy-Item node_modules -Destination publish -Recurse
-      - name: Deploy to MonsterASP
+          dotnet-version: 8.0.x
+      - name: Restore dependencies
+        run: dotnet restore Atlas.csproj
+      - name: Compile
+        run: dotnet build Atlas.csproj --configuration Release --no-restore
+      - name: Publish package
+        run: dotnet publish Atlas.csproj --configuration Release --output ./publish --no-restore
+      - name: Upload publish output for diagnostics
+        uses: actions/upload-artifact@v4
+        with:
+          name: atlas-publish
+          path: publish/
+          retention-days: 5
+      - name: Deploy MonsterASP via WebDeploy
+        if: github.ref == 'refs/heads/main'
         uses: rasmusbuchholdt/simply-web-deploy@2.1.0
         with:
           website-name: ${{ secrets.WEBSITE_NAME }}

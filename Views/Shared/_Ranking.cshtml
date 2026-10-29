@@ -1,0 +1,11 @@
+@model List<NamedAmount>
+@{ var total=Model.Sum(x=>x.Amount); }
+@if(Model.Count==0){<div class="empty-inline">Sem dados para esta competência.</div>}
+else {<div class="ranking">
+@foreach(var item in Model){
+  var percent=total>0?Math.Min(100m,Math.Round(item.Amount/total*100,1)):0;
+  <div class="rank-item"><div class="rank-head"><span>@item.Name</span><strong>@item.Amount.ToString("C")</strong></div>
+    <div class="rank-track"><div class="rank-fill" style="width:@(percent.ToString(CultureInfo.InvariantCulture))%"></div></div>
+    <small>@percent.ToString("N1")% do total</small></div>
+}
+</div>}

@@ -1,0 +1,26 @@
+@model ExpenseListVm
+@{ ViewData["Title"]="Despesas"; }
+<div class="section-heading"><div><div class="eyebrow">SAÍDAS FINANCEIRAS</div><h2>Despesas</h2><p class="muted">Compromissos, recorrências e parcelas em um só lugar.</p></div><a class="btn dark" asp-action="Create">+ Nova despesa</a></div>
+<form method="get" class="card filter-card"><div class="filter-grid filter-five">
+<div class="field"><label>Pesquisar</label><input name="search" value="@Model.Search" placeholder="Descrição" /></div>
+<div class="field"><label>Status</label><select name="status"><option value="">Todos</option><option value="paid" selected="@(Model.Status=="paid")">Pago</option><option value="pending" selected="@(Model.Status=="pending")">Pendente</option></select></div>
+<div class="field"><label>Categoria</label><select name="category"><option value="">Todas</option>@foreach(var cat in Model.Categories){<option value="@cat" selected="@(cat==Model.Category)">@cat</option>}</select></div>
+<div class="field"><label>Ano</label><input name="year" type="number" min="2000" max="2100" value="@Model.Year" placeholder="Todos" /></div>
+<div class="field"><label>Mês</label><select name="month"><option value="">Todos</option>@for(var i=1;i<=12;i++){<option value="@i" selected="@(Model.Month==i)">@CultureInfo.GetCultureInfo("pt-BR").DateTimeFormat.GetMonthName(i)</option>}</select></div>
+</div><div class="filter-actions"><button class="btn dark">Filtrar</button><a class="btn ghost" asp-action="Index">Limpar</a></div></form>
+<section class="card table-card"><div class="card-title"><div><div class="eyebrow">COMPROMISSOS</div><h3>Despesas registradas</h3></div><span class="card-meta">Até 500 registros</span></div>
+@if(Model.Rows.Count==0){<div class="empty-inline">Nenhuma despesa encontrada para os filtros selecionados.</div>}
+else{<div class="table-scroll"><table><thead><tr><th>Descrição</th><th>Competência</th><th>Categoria</th><th>Pagamento</th><th>Tipo</th><th>Status</th><th class="align-right">Valor</th><th>Ações</th></tr></thead><tbody>
+@foreach(var row in Model.Rows){<tr><td class="strong-cell">@row.Description
+@if(row.InstallmentNumber.HasValue){<small class="subcell">Parcela @row.InstallmentNumber/@row.InstallmentTotal</small>}
+else if(row.RecurringSeriesId.HasValue){<small class="subcell">@(Model.ActiveSeries.Contains(row.RecurringSeriesId.Value)?"Recorrente":"Recorrência encerrada")</small>}
+</td><td>@row.Date.ToString("dd/MM/yyyy")</td><td>@row.Category</td><td>@row.PaymentMethod</td><td>@row.ExpenseType</td><td><span class="pill @(row.Paid?"paid":"pending")">@(row.Paid?"Pago":"Pendente")</span></td>
+<td class="align-right amount-negative">@row.Amount.ToString("C")</td><td><div class="row-actions">
+@if(!row.Paid){<form asp-action="Pay" asp-route-id="@row.Id" method="post"><button class="link-action success-text">Dar baixa</button></form>}
+<a class="link-action" asp-action="Edit" asp-route-id="@row.Id">Editar</a>
+@if(row.RecurringSeriesId is Guid sid){
+@if(Model.ActiveSeries.Contains(sid)){<form asp-action="End" asp-route-id="@sid" method="post" data-confirm="Encerrar recorrência e remover despesas futuras?" ><button class="link-action danger">Encerrar</button></form>}
+}else{<form asp-action="Delete" asp-route-id="@row.Id" method="post" data-confirm="Excluir esta despesa?" ><button class="link-action danger">Excluir</button></form>}
+</div></td></tr>}
+</tbody></table></div>}
+</section>

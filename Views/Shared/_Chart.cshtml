@@ -1,0 +1,13 @@
+@model List<MonthlyPoint>
+@{ var largest=Math.Max(1m,Model.SelectMany(p=>new[]{p.Income,p.Expense}).DefaultIfEmpty(0).Max()); }
+<div class="chart" role="img" aria-label="Comparação mensal de faturamento e despesas">
+  @foreach(var point in Model){
+    var h1=Math.Max(2m,Math.Round(point.Income/largest*100,1));
+    var h2=Math.Max(2m,Math.Round(point.Expense/largest*100,1));
+    <div class="chart-month"><div class="chart-bars">
+      <div class="bar revenue" style="height:@(h1.ToString(CultureInfo.InvariantCulture))%" title="Receitas: @point.Income.ToString("C")"></div>
+      <div class="bar expense" style="height:@(h2.ToString(CultureInfo.InvariantCulture))%" title="Despesas: @point.Expense.ToString("C")"></div>
+    </div><span>@point.Label</span></div>
+  }
+</div>
+<div class="chart-legend"><span><i class="legend-revenue"></i> Faturamento</span><span><i class="legend-expense"></i> Despesas</span></div>

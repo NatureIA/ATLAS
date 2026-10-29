@@ -1,0 +1,59 @@
+@{
+  var path=Context.Request.Path.ToString().ToLowerInvariant();
+  var authenticated=User.Identity?.IsAuthenticated==true;
+  var title=ViewData["Title"]?.ToString()??"Visão geral";
+  var userName=User.Identity?.Name??"Usuário";
+  var initial=userName.Length>0?userName[0].ToString().ToUpperInvariant():"U";
+}
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="color-scheme" content="light" />
+  <meta name="theme-color" content="#f4f5f3" />
+  <title>@title · ATLAS</title>
+  <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body class="@(authenticated?"app-body":"auth-body")">
+@if(authenticated){
+  <button class="menu-backdrop" id="menuBackdrop" type="button" aria-label="Fechar menu"></button>
+  <aside class="sidebar" id="sidebar">
+    <div class="brand"><span class="brand-mark">A</span><div><strong>ATLAS</strong><small>GESTÃO FINANCEIRA</small></div></div>
+    <div class="nav-caption">ESPAÇO DE TRABALHO</div>
+    <nav class="main-nav" aria-label="Navegação principal">
+      <a class="@(path=="/"||path.StartsWith("/home")?"selected":"")" asp-controller="Home" asp-action="Index"><span class="nav-icon">◫</span> Visão geral</a>
+      <a class="@(path.StartsWith("/revenue")?"selected":"")" asp-controller="Revenue" asp-action="Index"><span class="nav-icon">↗</span> Faturamento</a>
+      <a class="@(path.StartsWith("/expenses")?"selected":"")" asp-controller="Expenses" asp-action="Index"><span class="nav-icon">↙</span> Despesas</a>
+      <a class="@(path.StartsWith("/items")?"selected":"")" asp-controller="Items" asp-action="Index"><span class="nav-icon">▤</span> Itens de receita</a>
+      <a class="@(path.StartsWith("/goals")?"selected":"")" asp-controller="Goals" asp-action="Index"><span class="nav-icon">◎</span> Metas</a>
+      <a class="@(path.StartsWith("/reports")?"selected":"")" asp-controller="Reports" asp-action="Index"><span class="nav-icon">▥</span> Relatórios</a>
+    </nav>
+    <div class="sidebar-spacer"></div>
+    <div class="sidebar-foot"><div class="sidebar-status"><span class="status-dot"></span> Seu ambiente financeiro</div><small>Organizado para decisões melhores.</small></div>
+  </aside>
+  <div class="workspace">
+    <header class="topbar">
+      <div class="topbar-content">
+        <div class="topbar-left">
+          <button id="menuButton" class="mobile-menu" type="button" aria-label="Abrir navegação">☰</button>
+          <div><div class="eyebrow">CONTROLE FINANCEIRO <span class="eyebrow-divider">/</span> @title.ToUpperInvariant()</div><h1>@title</h1></div>
+        </div>
+        <div class="account"><span class="avatar">@initial</span><span class="account-name">@userName</span>
+          <form asp-controller="Auth" asp-action="Logout" method="post"><button class="signout" title="Sair da conta" type="submit">Sair</button></form>
+        </div>
+      </div>
+    </header>
+    <main class="content">
+      @if(TempData["Success"] is string success){<div role="status" class="toast success">@success</div>}
+      @if(TempData["Error"] is string error){<div role="alert" class="toast error">@error</div>}
+      @RenderBody()
+    </main>
+  </div>
+}else{
+  <main class="auth-container">@RenderBody()</main>
+}
+<script src="~/js/site.js" asp-append-version="true"></script>
+@await RenderSectionAsync("Scripts",required:false)
+</body>
+</html>

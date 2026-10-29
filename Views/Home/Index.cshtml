@@ -1,0 +1,39 @@
+@model DashboardVm
+@{ ViewData["Title"]="Visão geral";
+  var selected=new DateTime(Model.Year,Model.Month,1);
+  var prev=selected.AddMonths(-1);var next=selected.AddMonths(1);
+  var monthName=selected.ToString("MMMM yyyy",new CultureInfo("pt-BR"));
+}
+<div class="section-heading"><div><div class="eyebrow">RESUMO DO PERÍODO</div><h2>Seu desempenho em números.</h2><p class="muted">Indicadores calculados diretamente dos lançamentos.</p></div>
+  <div class="period-picker"><a asp-action="Index" asp-route-year="@prev.Year" asp-route-month="@prev.Month" aria-label="Mês anterior">‹</a>
+    <strong>@monthName</strong><a asp-action="Index" asp-route-year="@next.Year" asp-route-month="@next.Month" aria-label="Próximo mês">›</a></div>
+</div>
+<div class="metrics-grid">
+ <div class="metric-card metric-primary"><div class="metric-label">Resultado do período <span class="metric-arrow">↗</span></div>
+   <strong class="metric-number">@Model.Profit.ToString("C")</strong><small>Faturamento menos despesas</small></div>
+ <div class="metric-card"><div class="metric-label">Faturamento <span class="trend-up">↗</span></div><strong class="metric-number">@Model.Revenue.ToString("C")</strong><small>@Model.SalesCount entradas nesta competência</small></div>
+ <div class="metric-card"><div class="metric-label">Despesas <span class="trend-neutral">↙</span></div><strong class="metric-number">@Model.Expenses.ToString("C")</strong><small>@(selected>=new DateTime(DateTime.Today.Year,DateTime.Today.Month,1)?"Pagas e compromissos":"Somente despesas pagas")</small></div>
+ <div class="metric-card"><div class="metric-label">Ticket médio <span class="trend-neutral">◌</span></div><strong class="metric-number">@Model.Ticket.ToString("C")</strong><small>Média por entrada</small></div>
+</div>
+<div class="insight-card"><span class="insight-icon">✦</span><div><div class="eyebrow">LEITURA FINANCEIRA</div><p>@Model.Insight</p></div><span class="insight-side">ATLAS INSIGHT</span></div>
+<div class="summary-secondary">
+ <div><small>Margem operacional</small><strong>@Model.Margin.ToString("N1")%</strong></div>
+ <div><small>Projeção de faturamento</small><strong>@Model.ProjectedRevenue.ToString("C")</strong></div>
+ <div><small>Meta da competência</small><strong>@Model.Target.ToString("C")</strong></div>
+ <div><small>Falta para a meta</small><strong>@Model.Remaining.ToString("C")</strong></div>
+ <div><small>Necessário por dia</small><strong>@Model.DailyNeeded.ToString("C")</strong></div>
+</div>
+<div class="content-grid main-split">
+ <section class="card"><div class="card-title"><div><div class="eyebrow">ÚLTIMOS 6 MESES</div><h3>Evolução financeira</h3></div><span class="card-meta">Comparativo mensal</span></div>
+   <partial name="_Chart" model="Model.History" /></section>
+ <section class="card"><div class="card-title"><div><div class="eyebrow">PARTICIPAÇÃO</div><h3>Fontes de receita</h3></div></div>
+   <partial name="_Ranking" model="Model.Sources" /></section>
+</div>
+<div class="content-grid bottom-split">
+ <section class="card"><div class="card-title"><div><div class="eyebrow">LANÇAMENTOS</div><h3>Movimentações recentes</h3></div><a class="text-link" asp-controller="Revenue" asp-action="Index">Ver todas ↗</a></div>
+ @if(Model.Recent.Count==0){<div class="empty-inline">Nenhuma receita registrada neste período.</div>}
+ else{<div class="recent-list">@foreach(var r in Model.Recent){<a asp-controller="Revenue" asp-action="Edit" asp-route-id="@r.Id" class="recent-row"><span class="recent-symbol">↗</span><span><strong>@r.RevenueItemName</strong><small>@r.PaymentMethod · @r.Date.ToString("dd/MM/yyyy")</small></span><b>@r.Amount.ToString("C")</b></a>}</div>}
+ </section>
+ <section class="card"><div class="card-title"><div><div class="eyebrow">DISTRIBUIÇÃO</div><h3>Despesas por categoria</h3></div></div>
+ <partial name="_Ranking" model="Model.Categories" /></section>
+</div>

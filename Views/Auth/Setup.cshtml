@@ -1,0 +1,14 @@
+@model SetupInput
+@{ ViewData["Title"]="Configurar acesso"; }
+<div class="setup-card card form-card">
+  <div class="eyebrow">PRIMEIRO ACESSO</div><h2>Configure seu administrador.</h2>
+  <p class="muted">Crie a primeira conta usando a chave privada configurada no servidor. O cadastro é bloqueado após esse primeiro usuário.</p>
+  <form asp-action="Setup" method="post" class="stack-form">
+    <div asp-validation-summary="All" class="validation"></div>
+    <label asp-for="Name">Nome</label><input asp-for="Name" required maxlength="120" />
+    <label asp-for="Email">E-mail</label><input asp-for="Email" type="email" required />
+    <label asp-for="Password">Senha</label><input asp-for="Password" type="password" minlength="12" required />
+    <label asp-for="SetupKey">Chave de instalação</label><input asp-for="SetupKey" type="password" required />
+    <button class="btn dark wide">Criar administrador</button>
+  </form>
+</div>

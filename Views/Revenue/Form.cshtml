@@ -1,0 +1,24 @@
+@model RevenueInput
+@{ var edit=Model.Id.HasValue; ViewData["Title"]=edit?"Editar receita":"Nova receita"; }
+<div class="section-heading"><div><div class="eyebrow">FATURAMENTO</div><h2>@(edit?"Editar receita":"Registrar receita")</h2>
+<p class="muted">@(edit?"A data original permanece preservada.":"A data financeira será a de hoje.")</p></div>
+<a class="btn ghost" asp-action="Index">← Voltar</a></div>
+<div class="card form-card"><form asp-action="@(edit?"Edit":"Create")" asp-route-id="@Model.Id" method="post" class="finance-form">
+<div asp-validation-summary="ModelOnly" class="validation"></div>
+<div class="field-grid"><div class="field"><label asp-for="ItemName">Item de receita <b>*</b></label><select asp-for="ItemName" id="itemSelect" required>
+<option value="">Selecione</option>
+@foreach(var item in Model.Items.Where(x=>x.Active||x.Name==Model.ItemName)) {<option value="@item.Name">@item.Name</option>}
+@if(!string.IsNullOrWhiteSpace(Model.ItemName)&&Model.ItemName!="__new__"&&!Model.Items.Any(x=>x.Name==Model.ItemName)){<option value="@Model.ItemName">@Model.ItemName</option>}
+<option value="__new__">+ Criar novo item</option>
+</select><span asp-validation-for="ItemName" class="validation"></span></div>
+<div id="newItemField" class="field conditional hidden"><label asp-for="NewItemName">Nome do novo item</label><input asp-for="NewItemName" maxlength="160" placeholder="Ex.: Consultoria mensal" /></div>
+<div class="field"><label asp-for="Amount">Valor <b>*</b></label><div class="currency-input"><span>R$</span><input asp-for="Amount" type="number" min="0.01" step="0.01" required /></div><span asp-validation-for="Amount" class="validation"></span></div>
+<div class="field"><label asp-for="PaymentMethod">Forma de recebimento</label><select asp-for="PaymentMethod">
+@foreach(var method in new[]{"Pix","Dinheiro","Débito","Crédito","Transferência"}){<option value="@method">@method</option>}
+</select></div>
+<div class="field"><label asp-for="ReferenceName">Referência (opcional)</label><input asp-for="ReferenceName" maxlength="160" placeholder="Cliente ou descrição complementar" /></div>
+<div class="field full"><label asp-for="Notes">Observações</label><textarea asp-for="Notes" rows="4" maxlength="1000" placeholder="Informações adicionais"></textarea></div></div>
+@if(!edit){<div class="form-divider"></div><label class="toggle-row"><input asp-for="IsRecurring" type="checkbox" /><span><strong>Receita recorrente mensal</strong><small>Cria uma série que gera ocorrências em novas competências.</small></span></label>}
+else if(Model.ExistingRecurring){<div class="notice-inline">Esta receita é recorrente. A alteração afetará esta ocorrência e as seguintes, preservando os meses anteriores.</div>}
+<div class="form-actions"><a class="btn ghost" asp-action="Index">Cancelar</a><button class="btn dark" type="submit">@(edit?"Salvar alterações":"Registrar receita")</button></div>
+</form></div>

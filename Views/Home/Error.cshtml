@@ -1,4 +1,18 @@
-@{ ViewData["Title"]="Erro inesperado"; }
-<div class="card empty"><h2>Não foi possível concluir esta solicitação.</h2>
-<p>Seus dados não foram alterados. Atualize a página ou tente novamente.</p>
-<a class="btn dark" asp-controller="Home" asp-action="Index">Voltar à visão geral</a></div>
+@{ 
+    ViewData["Title"]="Erro na operação";
+    var diagnostic=ViewData["DiagnosticCode"]?.ToString();
+    var reason=ViewData["DiagnosticCategory"]?.ToString()??"Falha interna ao processar a operação.";
+}
+<div class="card empty">
+    <h2>Não foi possível concluir esta solicitação.</h2>
+    <p>@reason</p>
+    <p>Não repita o envio antes de conferir se o lançamento já consta na lista.</p>
+    @if(!string.IsNullOrWhiteSpace(diagnostic)){
+        <p><strong>Referência do erro:</strong> <code>@diagnostic</code></p>
+    }
+    @if(ViewData["SqlErrorCode"] is int sqlError){
+        <p><strong>Código SQL:</strong> @sqlError</p>
+    }
+    <a class="btn dark" asp-controller="Expenses" asp-action="Index">Consultar despesas</a>
+    <a class="btn ghost" asp-controller="Home" asp-action="Index">Visão geral</a>
+</div>

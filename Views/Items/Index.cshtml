@@ -1,0 +1,16 @@
+@model ItemInput
+@{ ViewData["Title"]="Itens de receita"; var items=(List<RevenueItem>)ViewBag.Items; }
+<div class="section-heading"><div><div class="eyebrow">CATÁLOGO AUXILIAR</div><h2>Itens de receita</h2><p class="muted">Organize as origens que aparecem no faturamento.</p></div></div>
+<div class="content-grid catalog-split"><section class="card"><div class="card-title"><div><div class="eyebrow">CATÁLOGO</div><h3>Itens cadastrados</h3></div><span class="card-meta">@items.Count itens</span></div>
+@if(items.Count==0){<div class="empty-inline">Nenhum item cadastrado ainda.</div>}
+else{<div class="catalog-list">@foreach(var item in items){<div class="catalog-entry @(item.Active?"":"inactive")">
+<div class="catalog-title"><span class="recent-symbol">▤</span><span><strong>@item.Name</strong><small>@(item.Active?"Ativo":"Inativo")</small></span></div>
+<div class="row-actions"><details class="inline-edit"><summary class="link-action">Editar</summary>
+<form asp-action="Save" method="post" class="inline-form"><input type="hidden" name="Id" value="@item.Id" /><input name="Name" value="@item.Name" required maxlength="160" />
+<input type="hidden" name="Price" value="@item.Price.ToString(CultureInfo.InvariantCulture)" /><label class="checkbox-plain"><input type="checkbox" name="Active" value="true" checked="@item.Active"/> Ativo</label><button class="btn small dark">Salvar</button></form>
+</details><form asp-action="Toggle" asp-route-id="@item.Id" method="post"><button class="link-action">@(item.Active?"Desativar":"Ativar")</button></form>
+<form asp-action="Delete" asp-route-id="@item.Id" method="post" data-confirm="Excluir este item do catálogo? O histórico financeiro não será alterado."><button class="link-action danger">Excluir</button></form></div></div>}</div>}
+</section><section class="card"><div class="card-title"><div><div class="eyebrow">NOVO CADASTRO</div><h3>Adicionar item</h3></div></div>
+<form asp-action="Save" method="post" class="stack-form"><label asp-for="Name">Nome do item</label><input asp-for="Name" maxlength="160" placeholder="Ex.: Mensalidade" required />
+<input type="hidden" name="Price" value="0" /><button class="btn dark wide">Adicionar ao catálogo</button></form>
+<p class="muted small-note">O item também pode ser criado diretamente durante o registro de uma receita.</p></section></div>

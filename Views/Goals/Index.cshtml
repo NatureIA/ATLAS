@@ -1,0 +1,12 @@
+@model GoalInput
+@{ ViewData["Title"]="Metas"; var goals=(List<FinancialGoal>)ViewBag.Goals; }
+<div class="section-heading"><div><div class="eyebrow">OBJETIVOS FINANCEIROS</div><h2>Metas</h2><p class="muted">Defina o resultado que quer alcançar.</p></div></div>
+<div class="content-grid goals-split"><section class="card"><div class="card-title"><div><div class="eyebrow">ACOMPANHAMENTO</div><h3>Suas metas</h3></div></div>
+@if(goals.Count==0){<div class="empty-inline">Você ainda não definiu uma meta.</div>}
+else{<div class="goal-list">@foreach(var g in goals){<div class="goal-entry"><div><strong>@g.Name</strong><small>@(g.Deadline.HasValue?$"Prazo: {g.Deadline:dd/MM/yyyy}":"Sem prazo definido")</small><span class="goal-target">@g.TargetAmount.ToString("C")</span></div>
+<form asp-action="Delete" asp-route-id="@g.Id" method="post" data-confirm="Excluir esta meta?"><button class="link-action danger">Excluir</button></form></div>}</div>}
+</section><section class="card"><div class="card-title"><div><div class="eyebrow">NOVO OBJETIVO</div><h3>Criar meta</h3></div></div>
+<form asp-action="Create" method="post" class="stack-form"><label asp-for="Name">Nome da meta</label><input asp-for="Name" maxlength="160" required placeholder="Ex.: Meta de faturamento mensal" />
+<label asp-for="TargetAmount">Valor alvo</label><div class="currency-input"><span>R$</span><input asp-for="TargetAmount" type="number" step="0.01" min="0.01" required /></div>
+<label asp-for="Deadline">Prazo (opcional)</label><input asp-for="Deadline" type="date" />
+<button class="btn dark wide">Criar meta</button></form></section></div>

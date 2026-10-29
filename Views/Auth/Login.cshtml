@@ -1,0 +1,21 @@
+@model LoginInput
+@{ ViewData["Title"]="Entrar"; }
+<section class="auth-panel">
+  <div class="auth-art"><div class="auth-brand"><span class="brand-mark">A</span> ATLAS</div>
+  <div class="auth-message"><div class="auth-tag">GESTÃO QUE FAZ SENTIDO</div>
+    <h1>Mais clareza.<br/>Menos incerteza.</h1><p>Seu financeiro sob controle, em um só lugar.</p></div>
+  <div class="auth-art-footer">Uma visão precisa de cada decisão.</div></div>
+  <div class="auth-form-panel"><div class="auth-form-inner">
+    <div class="eyebrow">ACESSO SEGURO</div><h2>Bem-vindo de volta.</h2><p>Entre para acessar seu espaço financeiro.</p>
+    <form asp-action="Login" method="post" class="stack-form">
+      <div asp-validation-summary="ModelOnly" class="validation"></div>
+      <input type="hidden" asp-for="ReturnUrl" />
+      <label asp-for="Email">E-mail</label><input asp-for="Email" type="email" autocomplete="username" placeholder="seu@email.com" required />
+      <span asp-validation-for="Email" class="validation"></span>
+      <label asp-for="Password">Senha</label><input asp-for="Password" type="password" autocomplete="current-password" required />
+      <span asp-validation-for="Password" class="validation"></span>
+      <button class="btn dark wide" type="submit">Acessar meu financeiro <span>↗</span></button>
+    </form>
+    <div class="auth-note">Acesso individual. Seus dados permanecem separados dos demais usuários.</div>
+  </div></div>
+</section>

@@ -1,0 +1,61 @@
+using Atlas.Data;
+using Atlas.Services;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.EntityFrameworkCore;
+
+var builder = WebApplication.CreateBuilder(args);
+var connection = builder.Configuration.GetConnectionString("DefaultConnection")
+    ?? builder.Configuration["ConnectionStrings__DefaultConnection"]
+    ?? builder.Configuration["DB_CONNECTION_STRING"];
+if (string.IsNullOrWhiteSpace(connection))
+    throw new InvalidOperationException("Configure ConnectionStrings__DefaultConnection no MonsterASP.");
+
+builder.Services.AddDbContext<FinanceDbContext>(options => options.UseSqlServer(connection,
+    sql => sql.EnableRetryOnFailure(3, TimeSpan.FromSeconds(5), null)));
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<CurrentUser>();
+builder.Services.AddScoped<PasswordService>();
+builder.Services.AddScoped<AuditService>();
+builder.Services.AddScoped<RecurringService>();
+builder.Services.AddScoped<FinancialService>();
+builder.Services.AddControllersWithViews(options => options.Filters.Add(new Microsoft.AspNetCore.Mvc.AutoValidateAntiforgeryTokenAttribute()));
+builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+    .AddCookie(o => {
+        o.Cookie.Name = "AtlasFinanceSession";
+        o.Cookie.HttpOnly = true;
+        o.Cookie.SameSite = SameSiteMode.Lax;
+        o.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+        o.SlidingExpiration = true;
+        o.ExpireTimeSpan = TimeSpan.FromDays(7);
+        o.LoginPath = "/Auth/Login";
+        o.AccessDeniedPath = "/Auth/Login";
+    });
+builder.Services.AddAuthorization();
+builder.Services.Configure<ForwardedHeadersOptions>(o => {
+    o.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+});
+
+var app = builder.Build();
+app.UseForwardedHeaders();
+if (!app.Environment.IsDevelopment()) app.UseExceptionHandler("/Home/Error");
+app.UseStaticFiles();
+app.UseRouting();
+app.UseAuthentication();
+app.UseAuthorization();
+app.MapGet("/health", () => Results.Ok(new { status = "ok", application = "ATLAS", version = "3.0" }));
+app.MapGet("/health/db", async (FinanceDbContext db, CancellationToken ct) =>
+    await db.Database.CanConnectAsync(ct) ? Results.Ok(new { status = "ok" }) : Results.StatusCode(503))
+    .RequireAuthorization();
+app.MapControllerRoute(name: "default", pattern: "{controller=Home}/{action=Index}/{id?}");
+
+// O schema financeiro novo não altera as tabelas financeiras da aplicação anterior.
+// Em falha de conexão/migração, mantemos o processo iniciado para diagnóstico em /health.
+try {
+    using var scope = app.Services.CreateScope();
+    var db = scope.ServiceProvider.GetRequiredService<FinanceDbContext>();
+    await AtlasSchema.EnsureAsync(db);
+} catch (Exception e) {
+    app.Logger.LogCritical(e, "Falha ao preparar o banco financeiro. Verifique a conexão SQL Server e permissões DDL.");
+}
+await app.RunAsync();

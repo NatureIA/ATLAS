@@ -5,6 +5,7 @@ using Atlas.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Data;
 
 namespace Atlas.Controllers;
 [Authorize]
@@ -15,7 +16,7 @@ public class ExpensesController(FinanceDbContext db,CurrentUser current,AuditSer
         var existing=await db.Expenses.AsNoTracking().Where(x=>x.UserId==current.Id).Select(x=>x.Category).Distinct().ToListAsync();
         vm.Categories=DefaultCategories.Concat(existing).Concat(new[]{vm.Category}).Where(x=>!string.IsNullOrWhiteSpace(x)).Distinct().OrderBy(x=>x).ToList();
     }
-    [HttpGet] public async Task<IActionResult> Index(string? search,string? status,string? category,int? year,int? month){
+    [HttpGet] public async Task<IActionResult> Index(string? search,string? status,string? category,string? expenseType,string? paymentMethod,int? year,int? month){
         if(year is < 2000 or > 2100 || month is < 1 or > 12)return BadRequest();
         if(year.HasValue||month.HasValue)await recurrence.EnsureThroughAsync(current.Id,
             new DateTime(year??DateTime.Today.Year,month??12,1));
@@ -26,11 +27,13 @@ public class ExpensesController(FinanceDbContext db,CurrentUser current,AuditSer
         if(status=="paid")q=q.Where(x=>x.Paid);
         if(status=="pending")q=q.Where(x=>!x.Paid);
         if(!string.IsNullOrWhiteSpace(category))q=q.Where(x=>x.Category==category);
+        if(!string.IsNullOrWhiteSpace(expenseType))q=q.Where(x=>x.ExpenseType==expenseType);
+        if(!string.IsNullOrWhiteSpace(paymentMethod))q=q.Where(x=>x.PaymentMethod==paymentMethod);
         var rows=await q.OrderByDescending(x=>x.Date).ThenByDescending(x=>x.Id).Take(500).ToListAsync();
         var categories=await db.Expenses.AsNoTracking().Where(x=>x.UserId==current.Id).Select(x=>x.Category).Distinct().OrderBy(x=>x).ToListAsync();
         var activeSeries=await db.ExpenseSeries.AsNoTracking().Where(x=>x.UserId==current.Id&&x.Active).Select(x=>x.Id).ToListAsync();
         return View(new ExpenseListVm{Rows=rows,Search=search,Status=status,Category=category,Year=year,Month=month,
-            Categories=categories,ActiveSeries=activeSeries.ToHashSet()});
+            Categories=categories,ActiveSeries=activeSeries.ToHashSet(),ExpenseType=expenseType,PaymentMethod=paymentMethod});
     }
     [HttpGet] public async Task<IActionResult> Create(){var vm=new ExpenseInput();await Options(vm);return View("Form",vm);}
     [HttpPost,ValidateAntiForgeryToken] public async Task<IActionResult> Save(ExpenseInput input){
@@ -72,6 +75,7 @@ public class ExpensesController(FinanceDbContext db,CurrentUser current,AuditSer
     [HttpGet] public async Task<IActionResult> Edit(long id){
         var x=await db.Expenses.AsNoTracking().FirstOrDefaultAsync(x=>x.Id==id&&x.UserId==current.Id);
         if(x is null)return NotFound();
+        if(x.InstallmentGroupId is Guid groupId)return RedirectToAction(nameof(Installments),new{id=groupId});
         var vm=new ExpenseInput{Id=x.Id,Description=x.Description,Category=x.Category,ExpenseType=x.ExpenseType,
             Amount=x.Amount,PaymentMethod=x.PaymentMethod,Paid=x.Paid,Notes=x.Notes,ExistingRecurring=x.RecurringSeriesId!=null};
         await Options(vm);return View("Form",vm);
@@ -81,6 +85,7 @@ public class ExpensesController(FinanceDbContext db,CurrentUser current,AuditSer
         if(!ModelState.IsValid){input.Id=id;await Options(input);return View("Form",input);}
         var row=await db.Expenses.FirstOrDefaultAsync(x=>x.Id==id&&x.UserId==current.Id);
         if(row is null)return NotFound();
+        if(row.InstallmentGroupId is Guid groupId)return RedirectToAction(nameof(Installments),new{id=groupId});
         var cat=input.Category=="__new__"?input.NewCategory!.Trim():input.Category;
         await using var tx=await db.Database.BeginTransactionAsync();
         if(row.RecurringSeriesId is Guid seriesId){
@@ -97,6 +102,130 @@ public class ExpensesController(FinanceDbContext db,CurrentUser current,AuditSer
         } else {Apply(row,input,cat,true);audit.Add("UPDATE","ExpenseEntry",id,new{input.Amount,cat,input.Paid});}
         await db.SaveChangesAsync();await tx.CommitAsync();TempData["Success"]="Despesa atualizada.";return RedirectToAction("Index");
     }
+
+    // A group represents one purchase. Editing it updates every still-unpaid
+    // installment atomically, while never rewriting paid amounts or dates.
+    [HttpGet] public async Task<IActionResult> Installments(Guid id){
+        var rows=await db.Expenses.AsNoTracking()
+            .Where(x=>x.UserId==current.Id&&x.InstallmentGroupId==id)
+            .OrderBy(x=>x.InstallmentNumber).ToListAsync();
+        if(rows.Count==0)return NotFound();
+        var initial=rows.FirstOrDefault(x=>!x.Paid)??rows[0];
+        var first=rows[0];
+        var vm=new InstallmentGroupInput {
+            GroupId=id,Description=initial.Description,Category=initial.Category,
+            ExpenseType=initial.ExpenseType,Amount=initial.Amount,
+            PaymentMethod=initial.PaymentMethod,Notes=initial.Notes,
+            FirstInstallmentDate=first.Date,Installments=rows.Max(x=>x.InstallmentTotal??rows.Count)
+        };
+        await PopulateInstallmentOptions(vm,rows);
+        return View(vm);
+    }
+
+    [HttpPost,ValidateAntiForgeryToken]
+    public async Task<IActionResult> SaveInstallments(Guid id,InstallmentGroupInput input){
+        input.GroupId=id;
+        if(input.PaymentMethod is not ("Crédito" or "Boleto"))
+            ModelState.AddModelError(nameof(input.PaymentMethod),"O parcelamento deve permanecer como Crédito ou Boleto.");
+        if(input.ExpenseType is not ("Fixa" or "Variável"))
+            ModelState.AddModelError(nameof(input.ExpenseType),"Tipo de despesa inválido.");
+        if(input.Category=="__new__"&&string.IsNullOrWhiteSpace(input.NewCategory))
+            ModelState.AddModelError(nameof(input.NewCategory),"Informe a nova categoria.");
+        if(input.FirstInstallmentDate.Year is < 2000 or > 2100)
+            ModelState.AddModelError(nameof(input.FirstInstallmentDate),"Informe uma data válida.");
+
+        await using var tx=await db.Database.BeginTransactionAsync(IsolationLevel.Serializable);
+        var rows=await db.Expenses.Where(x=>x.UserId==current.Id&&x.InstallmentGroupId==id)
+            .OrderBy(x=>x.InstallmentNumber).ToListAsync();
+        if(rows.Count==0)return NotFound();
+        if(rows.Any(x=>x.InstallmentNumber is null)||
+           !rows.Select(x=>x.InstallmentNumber!.Value).SequenceEqual(Enumerable.Range(1,rows.Count))){
+            ModelState.AddModelError("","Este parcelamento tem parcelas ausentes ou fora de sequência. Nenhum registro foi alterado.");
+        }
+        var paid=rows.Where(x=>x.Paid).ToList();
+        var lastPaid=paid.Count==0?0:paid.Max(x=>x.InstallmentNumber!.Value);
+        if(input.Installments<lastPaid)
+            ModelState.AddModelError(nameof(input.Installments),
+                $"Não é possível reduzir para {input.Installments}: a parcela {lastPaid} já está paga.");
+        if(input.Installments>0&&input.FirstInstallmentDate.Year is >= 2000 and <= 2100){
+            for(var n=lastPaid+1;n<=input.Installments;n++){
+                var date=RecurringService.OccurrenceDate(input.FirstInstallmentDate,
+                    new DateTime(input.FirstInstallmentDate.Year,input.FirstInstallmentDate.Month,1).AddMonths(n-1));
+                if(paid.Any(x=>x.Date>=date)){
+                    ModelState.AddModelError(nameof(input.FirstInstallmentDate),
+                        "A nova data colocaria parcelas pendentes antes de um pagamento já realizado.");
+                    break;
+                }
+            }
+        }
+        if(!ModelState.IsValid){
+            await PopulateInstallmentOptions(input,rows);
+            return View("Installments",input);
+        }
+
+        var category=input.Category=="__new__"?input.NewCategory!.Trim():input.Category.Trim();
+        var oldCount=rows.Count;
+        var oldAmount=rows.Where(x=>!x.Paid).Select(x=>(decimal?)x.Amount).FirstOrDefault()
+            ??rows[0].Amount;
+        var oldFirstDate=rows[0].Date;
+        var byNumber=rows.ToDictionary(x=>x.InstallmentNumber!.Value);
+        var removed=0;
+        var created=0;
+        for(var number=1;number<=Math.Max(oldCount,input.Installments);number++){
+            byNumber.TryGetValue(number,out var existing);
+            if(number>input.Installments){
+                if(existing is not null&&!existing.Paid){db.Expenses.Remove(existing);removed++;}
+                continue;
+            }
+            var date=RecurringService.OccurrenceDate(input.FirstInstallmentDate,
+                new DateTime(input.FirstInstallmentDate.Year,input.FirstInstallmentDate.Month,1).AddMonths(number-1));
+            if(existing is null){
+                db.Expenses.Add(new ExpenseEntry {
+                    UserId=current.Id,InstallmentGroupId=id,InstallmentNumber=number,
+                    InstallmentTotal=input.Installments,Description=input.Description.Trim(),
+                    Category=category,ExpenseType=input.ExpenseType,Amount=input.Amount,
+                    PaymentMethod=input.PaymentMethod,Date=date,Paid=false,Notes=input.Notes,
+                    CreatedAt=DateTime.UtcNow
+                });
+                created++;
+            } else {
+                // Paid installments retain all their original financial details.
+                existing.InstallmentTotal=input.Installments;
+                if(existing.Paid)continue;
+                existing.Description=input.Description.Trim();
+                existing.Category=category;
+                existing.ExpenseType=input.ExpenseType;
+                existing.Amount=input.Amount;
+                existing.PaymentMethod=input.PaymentMethod;
+                existing.Date=date;
+                existing.Notes=input.Notes;
+            }
+        }
+        audit.Add("UPDATE","ExpenseInstallments",id,new {
+            PreviousCount=oldCount,NewCount=input.Installments,
+            PreviousPendingAmount=oldAmount,NewPendingAmount=input.Amount,
+            PreviousFirstDate=oldFirstDate,NewFirstDate=input.FirstInstallmentDate,
+            PaidProtected=paid.Count,Created=created,Removed=removed,
+            Category=category,PaymentMethod=input.PaymentMethod
+        });
+        await db.SaveChangesAsync();
+        await tx.CommitAsync();
+        TempData["Success"]=$"Parcelamento atualizado. {created} parcela(s) adicionada(s), {removed} removida(s). Pagamentos existentes preservados.";
+        return RedirectToAction(nameof(Index));
+    }
+
+    private async Task PopulateInstallmentOptions(InstallmentGroupInput input,List<ExpenseEntry> rows){
+        input.CurrentInstallments=rows.Count;
+        input.PaidCount=rows.Count(x=>x.Paid);
+        input.LastPaidNumber=rows.Where(x=>x.Paid).Select(x=>x.InstallmentNumber??0).DefaultIfEmpty(0).Max();
+        input.PaidAmountTotal=rows.Where(x=>x.Paid).Sum(x=>x.Amount);
+        var existing=await db.Expenses.AsNoTracking().Where(x=>x.UserId==current.Id)
+            .Select(x=>x.Category).Distinct().ToListAsync();
+        input.Categories=DefaultCategories.Concat(existing)
+            .Concat(new[]{input.Category}).Where(x=>!string.IsNullOrWhiteSpace(x)&&x!="__new__")
+            .Distinct().OrderBy(x=>x).ToList();
+    }
+
     [HttpPost,ValidateAntiForgeryToken] public async Task<IActionResult> Pay(long id){
         var row=await db.Expenses.FirstOrDefaultAsync(x=>x.Id==id&&x.UserId==current.Id);
         if(row is null)return NotFound();
@@ -106,6 +235,7 @@ public class ExpensesController(FinanceDbContext db,CurrentUser current,AuditSer
     [HttpPost,ValidateAntiForgeryToken] public async Task<IActionResult> Delete(long id){
         var row=await db.Expenses.FirstOrDefaultAsync(x=>x.Id==id&&x.UserId==current.Id);
         if(row is null)return NotFound();
+        if(row.InstallmentGroupId!=null){TempData["Error"]="Para excluir ou ajustar parcelas, use Gerenciar parcelamento.";return RedirectToAction("Index");}
         if(row.RecurringSeriesId!=null){TempData["Error"]="Para despesas recorrentes, encerre a série.";return RedirectToAction("Index");}
         db.Expenses.Remove(row);audit.Add("DELETE","ExpenseEntry",id,new{row.Amount,row.Description});
         await db.SaveChangesAsync();TempData["Success"]="Despesa excluída.";return RedirectToAction("Index");

@@ -39,6 +39,23 @@ public class ExpenseInput {
     public List<string> Categories {get;set;}=[];
     public bool ExistingRecurring {get;set;}
 }
+public class InstallmentGroupInput {
+    public Guid GroupId {get;set;}
+    [Required,MaxLength(250)] public string Description {get;set;}="";
+    [Required,MaxLength(100)] public string Category {get;set;}="Outros";
+    [MaxLength(100)] public string? NewCategory {get;set;}
+    [Required] public string ExpenseType {get;set;}="Variável";
+    [Range(typeof(decimal),"0.01","999999999999.99")] public decimal Amount {get;set;}
+    [Required] public string PaymentMethod {get;set;}="Crédito";
+    [Range(1,120)] public int Installments {get;set;}=1;
+    [Required,DataType(DataType.Date)] public DateTime FirstInstallmentDate {get;set;}
+    [MaxLength(1000)] public string? Notes {get;set;}
+    public List<string> Categories {get;set;}=[];
+    public int CurrentInstallments {get;set;}
+    public int PaidCount {get;set;}
+    public int LastPaidNumber {get;set;}
+    public decimal PaidAmountTotal {get;set;}
+}
 public class ItemInput {
     public int? Id {get;set;}
     [Required,MaxLength(160)] public string Name {get;set;}="";
@@ -62,6 +79,8 @@ public class ExpenseListVm {
     public string? Search {get;set;}
     public string? Status {get;set;}
     public string? Category {get;set;}
+    public string? ExpenseType {get;set;}
+    public string? PaymentMethod {get;set;}
     public int? Year {get;set;}
     public int? Month {get;set;}
     public List<string> Categories {get;set;}=[];

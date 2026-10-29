@@ -25,7 +25,12 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         o.Cookie.Name = "AtlasFinanceSession";
         o.Cookie.HttpOnly = true;
         o.Cookie.SameSite = SameSiteMode.Lax;
-        o.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+        // Em sites com TLS terminado no proxy ou ainda acessados por HTTP,
+        // Always faz o navegador descartar a sessao em HTTP apos o login.
+        // SameAsRequest protege o cookie em requisicoes HTTPS e o torna
+        // utilizavel no esquema que realmente recebeu a requisicao.
+        // HTTPS e obrigatorio para trafego financeiro em producao.
+        o.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
         o.SlidingExpiration = true;
         o.ExpireTimeSpan = TimeSpan.FromDays(7);
         o.LoginPath = "/Auth/Login";

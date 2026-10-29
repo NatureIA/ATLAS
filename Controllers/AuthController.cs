@@ -47,7 +47,7 @@ public class AuthController(FinanceDbContext db,PasswordService passwords,IConfi
         }
         await using var tx=await db.Database.BeginTransactionAsync(IsolationLevel.Serializable);
         if(await db.Users.AnyAsync())return RedirectToAction("Login");
-        var user=new AppUser{Name=input.Name.Trim(),Email=input.Email.Trim().ToLowerInvariant(),Role="ADMIN",Ativo=true};
+        var user=new AppUser{Nome=input.Name.Trim(),Email=input.Email.Trim().ToLowerInvariant(),Role="ADMIN",Ativo=true};
         user.PasswordHash=passwords.Hash(user,input.Password);
         db.Users.Add(user);await db.SaveChangesAsync();await tx.CommitAsync();
         await SignIn(user);

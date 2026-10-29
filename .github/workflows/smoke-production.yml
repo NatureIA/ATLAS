@@ -30,6 +30,13 @@ jobs:
             exit 1
           fi
 
+          post_status=$(curl --silent --show-error --max-time 12 -o /dev/null -w '%{http_code}' --request POST "$origin/health/http-post" || true)
+          echo "Health POST probe: HTTP $post_status (expected 200)"
+          if [[ "$post_status" != "200" ]]; then
+            echo "::error::IIS / ASP.NET Core does not accept public POST route: HTTP $post_status"
+            exit 1
+          fi
+
           for route in Expenses/Save Revenue/Save; do
             status=$(curl --silent --show-error --max-time 12 -o /dev/null -w '%{http_code}' \
               --request POST --data-urlencode '_atlas_smoke=1' "$origin/$route" || true)

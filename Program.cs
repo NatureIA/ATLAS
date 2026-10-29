@@ -49,6 +49,8 @@ app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapGet("/health", () => Results.Ok(new { status = "ok", application = "ATLAS", version = "3.0" }));
+// Non-mutating POST probe: checks the IIS / ASP.NET Core HTTP verb pipeline without login or data.
+app.MapPost("/health/http-post", () => Results.Ok(new { status = "ok", method = "POST" }));
 app.MapGet("/health/db", async (FinanceDbContext db, CancellationToken ct) =>
     await db.Database.CanConnectAsync(ct) ? Results.Ok(new { status = "ok" }) : Results.StatusCode(503))
     .RequireAuthorization();

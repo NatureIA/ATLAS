@@ -1,0 +1,43 @@
+name: ATLAS - verificar rotas de producao
+on:
+  workflow_run:
+    workflows: ["ATLAS .NET 8 - build and MonsterASP deploy"]
+    types: [completed]
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Health and POST routing on MonsterASP
+        shell: bash
+        run: |
+          set -euo pipefail
+          origin="http://salta-atlas.runasp.net"
+          status="000"
+          for attempt in $(seq 1 15); do
+            status=$(curl --silent --show-error --max-time 12 -o /dev/null -w '%{http_code}' "$origin/health" || true)
+            echo "health attempt $attempt: HTTP $status"
+            if [[ "$status" == "200" ]]; then break; fi
+            sleep 4
+          done
+          if [[ "$status" != "200" ]]; then
+            echo "::error::ATLAS health check did not return 200"
+            exit 1
+          fi
+
+          for route in Expenses/Save Revenue/Save; do
+            status=$(curl --silent --show-error --max-time 12 -o /dev/null -w '%{http_code}' \
+              --request POST --data-urlencode '_atlas_smoke=1' "$origin/$route" || true)
+            echo "$route POST without session: HTTP $status"
+            # Without a session the server may redirect to Login (302) or reject
+            # the antiforgery token (400). A 405 indicates no POST handler exists.
+            if [[ "$status" == "000" || "$status" == "404" || "$status" == "405" || "$status" =~ ^5 ]]; then
+              echo "::error::POST route /$route is unavailable: HTTP $status"
+              exit 1
+            fi
+          done
+          echo "ATLAS health and protected financial write routes are reachable"

@@ -33,7 +33,7 @@ public class ExpensesController(FinanceDbContext db,CurrentUser current,AuditSer
             Categories=categories,ActiveSeries=activeSeries.ToHashSet()});
     }
     [HttpGet] public async Task<IActionResult> Create(){var vm=new ExpenseInput();await Options(vm);return View("Form",vm);}
-    [HttpPost,ValidateAntiForgeryToken] public async Task<IActionResult> Create(ExpenseInput input){
+    [HttpPost,ValidateAntiForgeryToken] public async Task<IActionResult> Save(ExpenseInput input){
         Validate(input,true);
         if(!ModelState.IsValid){await Options(input);return View("Form",input);}
         var category=input.Category=="__new__"?input.NewCategory!.Trim():input.Category;
@@ -76,7 +76,7 @@ public class ExpensesController(FinanceDbContext db,CurrentUser current,AuditSer
             Amount=x.Amount,PaymentMethod=x.PaymentMethod,Paid=x.Paid,Notes=x.Notes,ExistingRecurring=x.RecurringSeriesId!=null};
         await Options(vm);return View("Form",vm);
     }
-    [HttpPost,ValidateAntiForgeryToken] public async Task<IActionResult> Edit(long id,ExpenseInput input){
+    [HttpPost,ValidateAntiForgeryToken] public async Task<IActionResult> Update(long id,ExpenseInput input){
         Validate(input,false);
         if(!ModelState.IsValid){input.Id=id;await Options(input);return View("Form",input);}
         var row=await db.Expenses.FirstOrDefaultAsync(x=>x.Id==id&&x.UserId==current.Id);

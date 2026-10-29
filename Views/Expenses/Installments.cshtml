@@ -26,7 +26,9 @@
   }
   <form asp-controller="Expenses" asp-action="SaveInstallments" asp-route-id="@Model.GroupId"
         method="post" asp-antiforgery="true" class="finance-form" id="installmentGroupForm"
-        data-paid-count="@Model.PaidCount" data-paid-total="@Model.PaidAmountTotal.ToString(System.Globalization.CultureInfo.InvariantCulture)">
+        data-paid-count="@Model.PaidCount" data-last-paid="@Model.LastPaidNumber"
+        data-paid-total="@Model.PaidAmountTotal.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+        data-confirm="Confirma a atualização de todo o parcelamento? Parcelas pagas serão preservadas.">
     <div asp-validation-summary="All" class="validation"></div>
     <div class="field-grid">
       <div class="field full">
@@ -79,7 +81,7 @@
     <div class="notice-inline">Todas as mudanças serão aplicadas em uma única transação no banco e registradas no histórico de auditoria. Pagamentos anteriores são preservados.</div>
     <div class="form-actions">
       <a class="btn ghost" asp-action="Index">Cancelar</a>
-      <button class="btn dark" type="submit" data-confirm="Confirma a atualização de todas as parcelas pendentes desta compra?">Salvar parcelamento completo</button>
+      <button class="btn dark" type="submit">Salvar parcelamento completo</button>
     </div>
   </form>
 </div>

@@ -1,5 +1,7 @@
 name: Validate ATLAS .NET 8
 on:
+  push:
+    branches: [fix-login-session-2026-10-29]
   pull_request:
     branches: [main]
 permissions:

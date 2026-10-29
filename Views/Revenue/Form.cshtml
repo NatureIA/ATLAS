@@ -3,7 +3,7 @@
 <div class="section-heading"><div><div class="eyebrow">FATURAMENTO</div><h2>@(edit?"Editar receita":"Registrar receita")</h2>
 <p class="muted">@(edit?"A data original permanece preservada.":"A data financeira será a de hoje.")</p></div>
 <a class="btn ghost" asp-action="Index">← Voltar</a></div>
-<div class="card form-card"><form asp-action="@(edit?"Edit":"Create")" asp-route-id="@Model.Id" method="post" class="finance-form">
+<div class="card form-card"><form asp-controller="Revenue" asp-action="@(edit?"Update":"Save")" asp-route-id="@Model.Id" method="post" asp-antiforgery="true" class="finance-form">
 <div asp-validation-summary="ModelOnly" class="validation"></div>
 <div class="field-grid"><div class="field"><label asp-for="ItemName">Item de receita <b>*</b></label><select asp-for="ItemName" id="itemSelect" required>
 <option value="">Selecione</option>

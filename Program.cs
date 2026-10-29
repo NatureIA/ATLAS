@@ -11,8 +11,12 @@ var connection = builder.Configuration.GetConnectionString("DefaultConnection")
 if (string.IsNullOrWhiteSpace(connection))
     throw new InvalidOperationException("Configure ConnectionStrings__DefaultConnection no MonsterASP.");
 
-builder.Services.AddDbContext<FinanceDbContext>(options => options.UseSqlServer(connection,
-    sql => sql.EnableRetryOnFailure(3, TimeSpan.FromSeconds(5), null)));
+// Explicit SQL transactions are used by financial operations and recurring series.
+// EF Core's automatic retrying execution strategy is incompatible with manually
+// initiated transactions unless the complete transaction uses ExecuteAsync.
+// Keep transactions atomic and disable implicit retries until per-operation
+// idempotent retry units are implemented.
+builder.Services.AddDbContext<FinanceDbContext>(options => options.UseSqlServer(connection));
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<CurrentUser>();
 builder.Services.AddScoped<PasswordService>();

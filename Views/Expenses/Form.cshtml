@@ -1,7 +1,7 @@
 @model ExpenseInput
 @{ var edit=Model.Id.HasValue; ViewData["Title"]=edit?"Editar despesa":"Nova despesa"; }
 <div class="section-heading"><div><div class="eyebrow">DESPESAS</div><h2>@(edit?"Editar despesa":"Registrar despesa")</h2><p class="muted">@(edit?"A competência original não será modificada.":"Escolha os dados essenciais. As opções adicionais aparecem quando necessário.")</p></div><a class="btn ghost" asp-action="Index">← Voltar</a></div>
-<div class="card form-card"><form asp-action="@(edit?"Edit":"Create")" asp-route-id="@Model.Id" method="post" class="finance-form" id="expenseForm" data-edit="@(edit?"true":"false")">
+<div class="card form-card"><form asp-controller="Expenses" asp-action="@(edit?"Update":"Save")" asp-route-id="@Model.Id" method="post" asp-antiforgery="true" class="finance-form" id="expenseForm" data-edit="@(edit?"true":"false")">
 <div asp-validation-summary="All" class="validation"></div>
 <div class="field-grid">
 <div class="field full"><label asp-for="Description">Descrição <b>*</b></label><input asp-for="Description" required maxlength="250" placeholder="Ex.: Assinatura de software" /></div>

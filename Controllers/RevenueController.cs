@@ -25,7 +25,7 @@ public class RevenueController(FinanceDbContext db,CurrentUser current,AuditServ
     }
     [HttpGet] public async Task<IActionResult> Create(){var vm=new RevenueInput();await Options(vm);return View("Form",vm);}
     [HttpPost,ValidateAntiForgeryToken]
-    public async Task<IActionResult> Create(RevenueInput input){
+    public async Task<IActionResult> Save(RevenueInput input){
         Validate(input);if(!ModelState.IsValid){await Options(input);return View("Form",input);}
         var name=input.ItemName=="__new__"?input.NewItemName!.Trim():input.ItemName.Trim();
         await using var tx=await db.Database.BeginTransactionAsync();
@@ -55,7 +55,7 @@ public class RevenueController(FinanceDbContext db,CurrentUser current,AuditServ
         await Options(vm);return View("Form",vm);
     }
     [HttpPost,ValidateAntiForgeryToken]
-    public async Task<IActionResult> Edit(long id,RevenueInput input){
+    public async Task<IActionResult> Update(long id,RevenueInput input){
         Validate(input);if(!ModelState.IsValid){input.Id=id;await Options(input);return View("Form",input);}
         var row=await db.Revenues.FirstOrDefaultAsync(x=>x.Id==id&&x.UserId==current.Id);
         if(row is null)return NotFound();

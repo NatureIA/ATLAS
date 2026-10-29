@@ -14,8 +14,9 @@ using System.Data;
 namespace Atlas.Controllers;
 [AllowAnonymous]
 public class AuthController(FinanceDbContext db,PasswordService passwords,IConfiguration config) : Controller {
-    [HttpGet] public IActionResult Login(string? returnUrl=null) {
+    [HttpGet] public IActionResult Login(string? returnUrl=null, bool sessionError=false) {
         if(User.Identity?.IsAuthenticated==true)return RedirectToAction("Index","Home");
+        if(sessionError)ModelState.AddModelError("","A senha foi aceita, mas a sessão não foi mantida pelo navegador. Verifique se cookies estão habilitados e utilize HTTPS sempre que disponível.");
         return View(new LoginInput {ReturnUrl=returnUrl});
     }
     [HttpPost,ValidateAntiForgeryToken]
@@ -28,8 +29,13 @@ public class AuthController(FinanceDbContext db,PasswordService passwords,IConfi
         }
         if(user.PasswordHash.Contains(':')) {user.PasswordHash=passwords.Hash(user,input.Password);await db.SaveChangesAsync();}
         await SignIn(user);
-        if(!string.IsNullOrWhiteSpace(input.ReturnUrl)&&Url.IsLocalUrl(input.ReturnUrl))return LocalRedirect(input.ReturnUrl);
+        return RedirectToAction(nameof(VerifySession),new{returnUrl=input.ReturnUrl});
+    [HttpGet] public IActionResult VerifySession(string? returnUrl=null) {
+        if(User.Identity?.IsAuthenticated!=true)
+            return RedirectToAction(nameof(Login),new{returnUrl,sessionError=true});
+        if(!string.IsNullOrWhiteSpace(returnUrl)&&Url.IsLocalUrl(returnUrl))return LocalRedirect(returnUrl);
         return RedirectToAction("Index","Home");
+    }
     }
     [HttpGet] public async Task<IActionResult> Setup(){
         if(await db.Users.AnyAsync())return RedirectToAction("Login");

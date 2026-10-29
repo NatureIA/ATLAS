@@ -30,12 +30,12 @@ public class AuthController(FinanceDbContext db,PasswordService passwords,IConfi
         if(user.PasswordHash.Contains(':')) {user.PasswordHash=passwords.Hash(user,input.Password);await db.SaveChangesAsync();}
         await SignIn(user);
         return RedirectToAction(nameof(VerifySession),new{returnUrl=input.ReturnUrl});
+    }
     [HttpGet] public IActionResult VerifySession(string? returnUrl=null) {
         if(User.Identity?.IsAuthenticated!=true)
             return RedirectToAction(nameof(Login),new{returnUrl,sessionError=true});
         if(!string.IsNullOrWhiteSpace(returnUrl)&&Url.IsLocalUrl(returnUrl))return LocalRedirect(returnUrl);
         return RedirectToAction("Index","Home");
-    }
     }
     [HttpGet] public async Task<IActionResult> Setup(){
         if(await db.Users.AnyAsync())return RedirectToAction("Login");

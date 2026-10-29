@@ -1,0 +1,85 @@
+@model InstallmentGroupInput
+@{
+    ViewData["Title"]="Gerenciar parcelamento";
+    var fmt=System.Globalization.CultureInfo.GetCultureInfo("pt-BR");
+}
+<div class="section-heading">
+  <div>
+    <div class="eyebrow">DESPESAS / PARCELAMENTO</div>
+    <h2>Editar parcelamento completo</h2>
+    <p class="muted">Corrija a compra inteira uma única vez. O ATLAS ajusta automaticamente as parcelas pendentes.</p>
+  </div>
+  <a class="btn ghost" asp-action="Index">← Voltar</a>
+</div>
+<div class="card form-card">
+  <div class="installment-summary">
+    <div><small>PARCELAS ATUAIS</small><strong>@Model.CurrentInstallments</strong></div>
+    <div><small>JÁ PAGAS (PROTEGIDAS)</small><strong>@Model.PaidCount</strong></div>
+    <div><small>VALOR JÁ PAGO</small><strong>@Model.PaidAmountTotal.ToString("C",fmt)</strong></div>
+  </div>
+  @if(Model.PaidCount>0){
+    <div class="notice-inline">
+      As parcelas pagas permanecem com seus valores, datas, descrições e status originais.
+      É possível atualizar apenas as pendentes, adicionar novas parcelas ou remover parcelas finais não pagas.
+      A quantidade não pode ser inferior à última parcela paga (@Model.LastPaidNumber).
+    </div>
+  }
+  <form asp-controller="Expenses" asp-action="SaveInstallments" asp-route-id="@Model.GroupId"
+        method="post" asp-antiforgery="true" class="finance-form" id="installmentGroupForm"
+        data-paid-count="@Model.PaidCount" data-paid-total="@Model.PaidAmountTotal.ToString(System.Globalization.CultureInfo.InvariantCulture)">
+    <div asp-validation-summary="All" class="validation"></div>
+    <div class="field-grid">
+      <div class="field full">
+        <label asp-for="Description">Descrição da compra <b>*</b></label>
+        <input asp-for="Description" maxlength="250" required />
+      </div>
+      <div class="field">
+        <label asp-for="Category">Categoria <b>*</b></label>
+        <select asp-for="Category" id="categorySelect" required>
+          @foreach(var cat in Model.Categories){<option value="@cat">@cat</option>}
+          <option value="__new__">+ Criar nova categoria</option>
+        </select>
+      </div>
+      <div class="field conditional hidden" id="newCategoryField">
+        <label asp-for="NewCategory">Nova categoria</label>
+        <input asp-for="NewCategory" maxlength="100" />
+      </div>
+      <div class="field">
+        <label asp-for="ExpenseType">Tipo de despesa</label>
+        <select asp-for="ExpenseType"><option value="Fixa">Fixa</option><option value="Variável">Variável</option></select>
+      </div>
+      <div class="field">
+        <label asp-for="PaymentMethod">Forma de pagamento</label>
+        <select asp-for="PaymentMethod"><option value="Crédito">Crédito</option><option value="Boleto">Boleto</option></select>
+      </div>
+      <div class="field">
+        <label asp-for="Amount">Valor por parcela <b>*</b></label>
+        <div class="currency-input"><span>R$</span><input asp-for="Amount" type="number" min="0.01" step="0.01" required /></div>
+        <small class="field-help">Não informe o valor total da compra. Parcelas pagas não serão recalculadas.</small>
+      </div>
+      <div class="field">
+        <label asp-for="Installments">Quantidade total de parcelas <b>*</b></label>
+        <input asp-for="Installments" type="number" min="1" max="120" required />
+        <small class="field-help">De 1 a 120. O sistema criará ou removerá parcelas pendentes automaticamente.</small>
+      </div>
+      <div class="field">
+        <label asp-for="FirstInstallmentDate">Data-base da primeira parcela <b>*</b></label>
+        <input asp-for="FirstInstallmentDate" type="date" required />
+        <small class="field-help">As parcelas não pagas serão distribuídas mensalmente a partir desta data.</small>
+      </div>
+      <div class="field full">
+        <label asp-for="Notes">Observações</label>
+        <textarea asp-for="Notes" rows="3" maxlength="1000"></textarea>
+      </div>
+    </div>
+    <div class="installment-preview" aria-live="polite">
+      <div><small>TOTAL DO PARCELAMENTO APÓS A ALTERAÇÃO</small><strong id="installmentPreviewTotal">—</strong></div>
+      <p id="installmentPreviewDescription" class="muted"></p>
+    </div>
+    <div class="notice-inline">Todas as mudanças serão aplicadas em uma única transação no banco e registradas no histórico de auditoria. Pagamentos anteriores são preservados.</div>
+    <div class="form-actions">
+      <a class="btn ghost" asp-action="Index">Cancelar</a>
+      <button class="btn dark" type="submit" data-confirm="Confirma a atualização de todas as parcelas pendentes desta compra?">Salvar parcelamento completo</button>
+    </div>
+  </form>
+</div>

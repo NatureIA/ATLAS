@@ -28,6 +28,16 @@ jobs:
         run: dotnet build Atlas.csproj --configuration Release --no-restore
       - name: Publish
         run: dotnet publish Atlas.csproj --configuration Release --output ./publish --no-restore
+      - name: Verify IIS handler settings in published web.config
+        shell: pwsh
+        run: |
+          [xml]$config = Get-Content "./publish/web.config" -Raw
+          $handler = $config.configuration.location.'system.webServer'.handlers.add |
+            Where-Object { $_.name -eq 'aspNetCore' }
+          if (!$handler -or $handler.verb -ne '*' -or $handler.modules -ne 'AspNetCoreModuleV2') {
+            throw "ASP.NET Core IIS handler is not configured for all HTTP verbs"
+          }
+          Write-Host "Published IIS handler: $($handler.path) / verb=$($handler.verb) / module=$($handler.modules)"
       - name: Publish artifact
         uses: actions/upload-artifact@v4
         with:

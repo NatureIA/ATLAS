@@ -1,1 +1,44 @@
-The requested file reference is not currently visible. Use files.search or files.list to rediscover the file, then retry with a returned ref_id or file_id.
+name: ATLAS .NET 8 - build and MonsterASP deploy
+on:
+  push:
+    branches: [main, atlas-dotnet-rebuild]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: atlas-dotnet-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - name: Restore
+        run: dotnet restore Atlas.csproj
+      - name: Build
+        run: dotnet build Atlas.csproj --configuration Release --no-restore
+      - name: Publish
+        run: dotnet publish Atlas.csproj --configuration Release --output ./publish --no-restore
+      - name: Publish artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: atlas-publish
+          path: publish/
+          retention-days: 5
+      - name: Deploy to existing MonsterASP website
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: rasmusbuchholdt/simply-web-deploy@2.1.0
+        with:
+          website-name: ${{ secrets.WEBSITE_NAME }}
+          server-computer-name: ${{ secrets.SERVER_COMPUTER_NAME }}
+          server-username: ${{ secrets.SERVER_USERNAME }}
+          server-password: ${{ secrets.SERVER_PASSWORD }}
+          source-path: '\publish\'

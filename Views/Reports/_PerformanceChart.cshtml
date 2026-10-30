@@ -1,13 +1,5 @@
 @model List<MonthlyPoint>
-@{
-    var posMax=Model.SelectMany(p=>new[]{p.Income,p.Expense,Math.Max(0m,p.Result)}).DefaultIfEmpty(0m).Max();
-    var negMax=Model.Select(p=>Math.Max(0m,-p.Result)).DefaultIfEmpty(0m).Max();
-    var combined=posMax+negMax;
-    var positivePixels=combined>0m?210m*posMax/combined:210m;
-    var negativePixels=combined>0m?210m*negMax/combined:0m;
-}
-<div class="report-performance" id="reportPerformance"
-     style="--report-positive-h:@(positivePixels.ToString("0.###",CultureInfo.InvariantCulture))px;--report-negative-h:@(negativePixels.ToString("0.###",CultureInfo.InvariantCulture))px">
+<div class="report-performance report-area" id="reportPerformance">
   <fieldset class="report-performance-flags" aria-label="Indicadores exibidos no gráfico">
     <legend>Exibir no gráfico</legend>
     <label class="report-flag report-flag-revenue">
@@ -23,41 +15,20 @@
       <span class="report-flag-mark" aria-hidden="true"></span>Resultado
     </label>
   </fieldset>
-  <p class="report-performance-note">Resultado = faturamento − despesas. Valores negativos aparecem abaixo da linha zero.</p>
-  <div class="report-performance-scroll">
-    <div class="report-performance-plot" role="group" aria-label="Comparação mensal de faturamento, despesas e resultado">
+  <p class="report-performance-note">Evolução financeira mensal. Resultado = faturamento − despesas; valores negativos ficam abaixo de zero.</p>
+  <div class="report-area-data" hidden>
     @foreach(var point in Model){
-        var revenueHeight=posMax>0m?point.Income/posMax*100m:0m;
-        var expenseHeight=posMax>0m?point.Expense/posMax*100m:0m;
-        var profitHeight=posMax>0m?Math.Max(0m,point.Result)/posMax*100m:0m;
-        var lossHeight=negMax>0m?Math.Max(0m,-point.Result)/negMax*100m:0m;
-        <div class="report-performance-month">
-          <div class="report-performance-positive">
-            <span class="report-performance-bar report-bar-revenue" data-series="revenue" data-side="positive"
-                  data-value="@point.Income.ToString(CultureInfo.InvariantCulture)"
-                  style="height:@(revenueHeight.ToString("0.###",CultureInfo.InvariantCulture))%"
-                  title="Faturamento: @point.Income.ToString("C")"></span>
-            <span class="report-performance-bar report-bar-expense" data-series="expense" data-side="positive"
-                  data-value="@point.Expense.ToString(CultureInfo.InvariantCulture)"
-                  style="height:@(expenseHeight.ToString("0.###",CultureInfo.InvariantCulture))%"
-                  title="Despesas: @point.Expense.ToString("C")"></span>
-            <span class="report-performance-bar report-bar-result" data-series="result" data-side="positive"
-                  data-value="@Math.Max(0m,point.Result).ToString(CultureInfo.InvariantCulture)"
-                  style="height:@(profitHeight.ToString("0.###",CultureInfo.InvariantCulture))%"
-                  title="Resultado: @point.Result.ToString("C")"></span>
-          </div>
-          <div class="report-performance-negative">
-            <span class="report-performance-placeholder" aria-hidden="true"></span>
-            <span class="report-performance-placeholder" aria-hidden="true"></span>
-            <span class="report-performance-bar report-bar-loss" data-series="result" data-side="negative"
-                  data-value="@Math.Max(0m,-point.Result).ToString(CultureInfo.InvariantCulture)"
-                  style="height:@(lossHeight.ToString("0.###",CultureInfo.InvariantCulture))%"
-                  title="Resultado: @point.Result.ToString("C")"></span>
-          </div>
-          <span class="report-performance-month-label">@point.Label</span>
-        </div>
+      <span data-month="@point.Label"
+            data-revenue="@point.Income.ToString(CultureInfo.InvariantCulture)"
+            data-expense="@point.Expense.ToString(CultureInfo.InvariantCulture)"
+            data-result="@point.Result.ToString(CultureInfo.InvariantCulture)"></span>
     }
-    </div>
+  </div>
+  <div class="report-area-chart" id="reportAreaChart">
+    <svg id="reportAreaSvg" class="report-area-svg" viewBox="0 0 960 320" aria-label="Evolução mensal de faturamento, despesas e resultado de janeiro a dezembro" role="img">
+      <text x="480" y="158" fill="#8f9d93" text-anchor="middle">Carregando gráfico financeiro…</text>
+    </svg>
+    <div class="report-area-tooltip" id="reportAreaTooltip" aria-hidden="true"></div>
   </div>
   <p class="report-performance-empty hidden" role="status">Marque ao menos um indicador para visualizar o gráfico.</p>
 </div>

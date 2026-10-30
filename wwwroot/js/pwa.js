@@ -41,7 +41,7 @@
   };
 
   const updateVisibility = () => {
-    if (button) button.hidden = standalone();
+    if (button) { button.hidden = standalone(); button.textContent = installPrompt ? 'Instalar ATLAS' : 'Como instalar ATLAS'; }
     if (standalone()) closeHelp();
   };
 

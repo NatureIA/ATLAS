@@ -1,0 +1,63 @@
+@model List<MonthlyPoint>
+@{
+    var posMax=Model.SelectMany(p=>new[]{p.Income,p.Expense,Math.Max(0m,p.Result)}).DefaultIfEmpty(0m).Max();
+    var negMax=Model.Select(p=>Math.Max(0m,-p.Result)).DefaultIfEmpty(0m).Max();
+    var combined=posMax+negMax;
+    var positivePixels=combined>0m?210m*posMax/combined:210m;
+    var negativePixels=combined>0m?210m*negMax/combined:0m;
+}
+<div class="report-performance" id="reportPerformance"
+     style="--report-positive-h:@(positivePixels.ToString("0.###",CultureInfo.InvariantCulture))px;--report-negative-h:@(negativePixels.ToString("0.###",CultureInfo.InvariantCulture))px">
+  <fieldset class="report-performance-flags" aria-label="Indicadores exibidos no gráfico">
+    <legend>Exibir no gráfico</legend>
+    <label class="report-flag report-flag-revenue">
+      <input type="checkbox" value="revenue" checked />
+      <span class="report-flag-mark" aria-hidden="true"></span>Faturamento
+    </label>
+    <label class="report-flag report-flag-expense">
+      <input type="checkbox" value="expense" checked />
+      <span class="report-flag-mark" aria-hidden="true"></span>Despesas
+    </label>
+    <label class="report-flag report-flag-result">
+      <input type="checkbox" value="result" checked />
+      <span class="report-flag-mark" aria-hidden="true"></span>Resultado
+    </label>
+  </fieldset>
+  <p class="report-performance-note">Resultado = faturamento − despesas. Valores negativos aparecem abaixo da linha zero.</p>
+  <div class="report-performance-scroll">
+    <div class="report-performance-plot" role="group" aria-label="Comparação mensal de faturamento, despesas e resultado">
+    @foreach(var point in Model){
+        var revenueHeight=posMax>0m?point.Income/posMax*100m:0m;
+        var expenseHeight=posMax>0m?point.Expense/posMax*100m:0m;
+        var profitHeight=posMax>0m?Math.Max(0m,point.Result)/posMax*100m:0m;
+        var lossHeight=negMax>0m?Math.Max(0m,-point.Result)/negMax*100m:0m;
+        <div class="report-performance-month">
+          <div class="report-performance-positive">
+            <span class="report-performance-bar report-bar-revenue" data-series="revenue" data-side="positive"
+                  data-value="@point.Income.ToString(CultureInfo.InvariantCulture)"
+                  style="height:@(revenueHeight.ToString("0.###",CultureInfo.InvariantCulture))%"
+                  title="Faturamento: @point.Income.ToString("C")"></span>
+            <span class="report-performance-bar report-bar-expense" data-series="expense" data-side="positive"
+                  data-value="@point.Expense.ToString(CultureInfo.InvariantCulture)"
+                  style="height:@(expenseHeight.ToString("0.###",CultureInfo.InvariantCulture))%"
+                  title="Despesas: @point.Expense.ToString("C")"></span>
+            <span class="report-performance-bar report-bar-result" data-series="result" data-side="positive"
+                  data-value="@Math.Max(0m,point.Result).ToString(CultureInfo.InvariantCulture)"
+                  style="height:@(profitHeight.ToString("0.###",CultureInfo.InvariantCulture))%"
+                  title="Resultado: @point.Result.ToString("C")"></span>
+          </div>
+          <div class="report-performance-negative">
+            <span class="report-performance-placeholder" aria-hidden="true"></span>
+            <span class="report-performance-placeholder" aria-hidden="true"></span>
+            <span class="report-performance-bar report-bar-loss" data-series="result" data-side="negative"
+                  data-value="@Math.Max(0m,-point.Result).ToString(CultureInfo.InvariantCulture)"
+                  style="height:@(lossHeight.ToString("0.###",CultureInfo.InvariantCulture))%"
+                  title="Resultado: @point.Result.ToString("C")"></span>
+          </div>
+          <span class="report-performance-month-label">@point.Label</span>
+        </div>
+    }
+    </div>
+  </div>
+  <p class="report-performance-empty hidden" role="status">Marque ao menos um indicador para visualizar o gráfico.</p>
+</div>

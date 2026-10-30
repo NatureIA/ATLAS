@@ -71,3 +71,34 @@
 .report-area-tooltip-dot{width:8px;height:8px;border-radius:50%}
 .report-area-data{display:none}
 @media(max-width:760px){.report-area-chart{overflow-x:auto;overflow-y:visible}.report-area-svg{min-width:760px;min-height:250px}.report-area-tooltip{position:sticky;left:50%!important;top:0;transform:translateX(-50%);margin-top:-1px;width:max-content}.report-performance-note{margin-bottom:15px}}
+
+/* ATLAS LOGIN — 2026 reference: full-screen violet/navy split, isolated from
+   registration/setup screens and every authenticated workspace component. */
+.auth-body:has(.atlas-login){margin:0;background:#fff}
+.auth-container:has(> .atlas-login){display:block;min-height:100dvh;width:100%;padding:0;margin:0}
+.atlas-login{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);width:100%;min-height:100dvh;background:#fff;overflow:hidden}
+.atlas-login-visual{display:flex;flex-direction:column;justify-content:space-between;min-height:100dvh;padding:clamp(36px,4vw,58px) clamp(30px,4vw,56px) clamp(36px,3.7vw,54px);color:#fff;background:linear-gradient(150deg,#131a31 0%,#1b1e47 36%,#2b246a 68%,#5234a0 100%)}
+.atlas-login-brand{display:flex;flex-direction:column;align-items:flex-start;gap:8px;line-height:1}
+.atlas-login-brand strong{font-size:20px;font-weight:800;letter-spacing:.23em}
+.atlas-login-brand span{font-size:7px;font-weight:550;letter-spacing:.24em;color:#bec4ed}
+.atlas-login-message{max-width:530px;margin:36px 0 30px}
+.atlas-login-message h1{margin:0;color:#fff;font-size:clamp(38px,4.05vw,61px);font-weight:780;letter-spacing:-.065em;line-height:1.09}
+.atlas-login-footer{margin:0;color:#fff;font-size:12px;font-weight:550;line-height:1.65}
+.atlas-login-panel{display:grid;place-items:center;padding:52px 30px;min-height:100dvh;background:#fff}
+.atlas-login-content{width:min(100%,350px);margin:0}
+.atlas-login-eyebrow{color:#5d6eab;font-size:9px;font-weight:750;letter-spacing:.15em;margin-bottom:24px}
+.atlas-login-content h2{color:#0b1020;font-size:26px;font-weight:750;letter-spacing:-.055em;line-height:1.18;margin:0 0 12px}
+.atlas-login-subtitle{color:#9298a8;font-size:11px;line-height:1.5;margin:0 0 24px}
+.atlas-login-form{display:flex;flex-direction:column;gap:17px}
+.atlas-login-field{display:flex;flex-direction:column;gap:8px}
+.atlas-login-field label{color:#50608b;font-size:10px;font-weight:650}
+.atlas-login-field input:not([type=checkbox]){width:100%;height:43px;min-height:43px;background:#fff;color:#1c2440;border:1px solid #d9dfec;border-radius:8px;padding:10px 12px;font-size:13px;box-shadow:none;transition:border-color .15s ease,box-shadow .15s ease}
+.atlas-login-field input:not([type=checkbox]):focus{border-color:#6350e4;outline:0;box-shadow:0 0 0 3px #6751e51b}
+.atlas-login-form .validation{font-size:11px;line-height:1.4;color:#bf4352}
+.atlas-login-form .validation:empty{display:none}
+.atlas-login-submit{width:100%;min-height:43px;background:#6350e8;color:#fff;border:0;border-radius:8px;font-size:12px;font-weight:700;margin-top:5px;padding:12px 16px;box-shadow:0 6px 14px #6450e51c;transition:background .16s ease,transform .16s ease}
+.atlas-login-submit:hover{background:#5340d7;transform:translateY(-1px)}
+.atlas-login-submit:focus-visible{outline:3px solid #a9a2ff;outline-offset:3px}
+@media(max-width:900px){.atlas-login-visual{padding:38px 31px}.atlas-login-message h1{font-size:clamp(33px,4.2vw,46px)}.atlas-login-panel{padding:40px 24px}.atlas-login-content{max-width:340px}}
+@media(max-width:660px){.atlas-login{grid-template-columns:1fr}.atlas-login-visual{min-height:280px;padding:27px 26px 31px;gap:24px}.atlas-login-brand strong{font-size:18px}.atlas-login-message{margin:8px 0}.atlas-login-message h1{font-size:clamp(30px,7.4vw,43px);line-height:1.12}.atlas-login-footer{font-size:10.5px}.atlas-login-panel{min-height:calc(100dvh - 280px);padding:48px 25px 60px;align-items:start}.atlas-login-content{width:min(100%,380px)}.atlas-login-content h2{font-size:26px}}
+@media(max-width:380px){.atlas-login-visual{min-height:260px;padding:23px}.atlas-login-message h1{font-size:29px}.atlas-login-panel{padding:36px 22px 50px}}

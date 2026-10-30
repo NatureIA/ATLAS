@@ -110,7 +110,10 @@ public class DashboardVm {
 public class ReportVm {
     public int Year {get;set;}
     public decimal Revenue {get;set;}
+    // Total annual commitments, including both paid and pending entries.
     public decimal Expenses {get;set;}
+    public decimal PaidExpenses {get;set;}
+    public decimal PendingExpenses {get;set;}
     public decimal Profit => Revenue-Expenses;
     public decimal Margin => Revenue<=0?0:Math.Round(Profit/Revenue*100,1);
     public int SourceCount {get;set;}

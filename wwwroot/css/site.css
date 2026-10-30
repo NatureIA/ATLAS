@@ -24,3 +24,35 @@
 .report-payment-stat strong{font-size:22px;letter-spacing:-.04em;color:#17221a}
 .report-payment-stat small{font-size:10px;color:#909e93}
 @media(max-width:760px){.report-payment-summary{grid-template-columns:1fr;gap:10px}.report-payment-stat{padding:16px 18px}}
+
+/* Reports: interactive flags for Faturamento, Despesas and Resultado only. */
+.report-performance{min-width:0}
+.report-performance-flags{display:flex;flex-wrap:wrap;align-items:center;gap:9px 10px;border:0;padding:0;margin:0 0 9px;min-width:0}
+.report-performance-flags legend{float:left;width:100%;font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:#8a958d;font-weight:700;margin-bottom:9px}
+.report-flag{display:inline-flex;align-items:center;gap:8px;padding:9px 13px;cursor:pointer;border:1px solid #e0e6df;border-radius:10px;background:#fbfcfb;color:#384a3e;font-size:11px;font-weight:650;user-select:none}
+.report-flag:has(input:not(:checked)){opacity:.48;background:#f6f7f5}
+.report-flag input{accent-color:#148a65;cursor:pointer;margin:0;width:15px;height:15px}
+.report-flag:focus-within{outline:2px solid #9278eb;outline-offset:2px}
+.report-flag-mark{display:block;width:9px;height:9px;border-radius:3px;flex:none}
+.report-flag-revenue .report-flag-mark{background:#0e9065}
+.report-flag-expense .report-flag-mark{background:#c7d0c9}
+.report-flag-result .report-flag-mark{background:#7559d5}
+.report-performance-note{font-size:11px;color:#89968d;margin:0 0 22px;line-height:1.6}
+.report-performance-scroll{overflow-x:auto;max-width:100%;padding-bottom:3px}
+.report-performance-scroll[hidden]{display:none}
+.report-performance-plot{min-width:690px;display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:9px;align-items:start}
+.report-performance-month{min-width:0;display:flex;flex-direction:column;align-items:stretch}
+.report-performance-positive,.report-performance-negative{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));column-gap:4px;align-items:end;padding:0 4px}
+.report-performance-positive{height:var(--report-positive-h,210px);border-bottom:1px solid #dce4dc}
+.report-performance-negative{height:var(--report-negative-h,0px);align-items:start}
+.report-performance-bar{display:block;min-height:0;width:100%;border-radius:5px 5px 0 0;transition:height .22s ease;overflow:hidden}
+.report-performance-negative .report-performance-bar{border-radius:0 0 5px 5px}
+.report-bar-revenue{background:#0e9065}
+.report-bar-expense{background:#c7d0c9}
+.report-bar-result{background:#7559d5}
+.report-bar-loss{background:#bc5261}
+.report-performance-bar.is-omitted{visibility:hidden}
+.report-performance-placeholder{visibility:hidden}
+.report-performance-month-label{font-size:10px;color:#8d998f;text-align:center;padding-top:12px;text-transform:capitalize}
+.report-performance-empty{padding:36px 12px;text-align:center;color:#879389;font-size:12px;background:#fafbfa;border-radius:12px}
+@media(max-width:760px){.report-performance-flags{gap:8px}.report-flag{padding:9px 10px;font-size:10.5px}.report-performance-note{font-size:10.5px}.report-performance-plot{gap:9px}}

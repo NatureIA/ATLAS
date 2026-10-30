@@ -1,0 +1,31 @@
+{
+  "name": "ATLAS — Gestão Financeira",
+  "short_name": "ATLAS",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "background_color": "#f4f5f3",
+  "theme_color": "#6350e8",
+  "description": "Gestão financeira ATLAS",
+  "lang": "pt-BR",
+  "prefer_related_applications": false,
+  "icons": [
+    {
+      "src": "/icons/atlas-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/atlas-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

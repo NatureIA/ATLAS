@@ -2,6 +2,7 @@ using Atlas.Data;
 using Atlas.Services;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -48,7 +49,19 @@ builder.Services.Configure<ForwardedHeadersOptions>(o => {
 var app = builder.Build();
 app.UseForwardedHeaders();
 if (!app.Environment.IsDevelopment()) app.UseExceptionHandler("/Home/Error");
-app.UseStaticFiles();
+// Serve PWA manifest with the correct MIME type; keep its metadata and service worker fresh.
+var pwaTypes = new FileExtensionContentTypeProvider();
+pwaTypes.Mappings[".webmanifest"] = "application/manifest+json";
+app.UseStaticFiles(new StaticFileOptions {
+    ContentTypeProvider = pwaTypes,
+    OnPrepareResponse = context => {
+        var file = context.Context.Request.Path.Value ?? "";
+        if (file.Equals("/service-worker.js", StringComparison.OrdinalIgnoreCase) ||
+            file.Equals("/manifest.webmanifest", StringComparison.OrdinalIgnoreCase)) {
+            context.Context.Response.Headers.CacheControl = "no-cache, no-store, must-revalidate";
+        }
+    }
+});
 app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();

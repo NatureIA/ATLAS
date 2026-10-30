@@ -121,3 +121,10 @@
 .sidebar .sidebar-status{color:#fff}
 .sidebar .sidebar-foot small{color:#e0dbff}
 .sidebar .status-dot{background:#fff}
+
+/* ATLAS PWA — botão de instalação discreto, apenas quando o navegador oferecer instalação. */
+.atlas-install-button[hidden]{display:none!important}
+.atlas-install-button{position:fixed;right:22px;bottom:22px;z-index:80;border:0;border-radius:12px;padding:13px 20px;background:#6350e8;color:white;font:700 12px Inter,system-ui,sans-serif;box-shadow:0 8px 25px #31246d44;cursor:pointer}
+.atlas-install-button:hover{background:#5340d7}
+.atlas-install-button:focus-visible{outline:3px solid #a9a2ff;outline-offset:3px}
+@media(max-width:760px){.atlas-install-button{right:16px;bottom:16px}}

@@ -11,7 +11,14 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <meta name="color-scheme" content="light" />
-  <meta name="theme-color" content="#f4f5f3" />
+  <meta name="theme-color" content="#6350e8" />
+  <meta name="application-name" content="ATLAS" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="ATLAS" />
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="/icons/atlas-192.png" />
   <title>@title · ATLAS</title>
   <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
 </head>
@@ -54,6 +61,7 @@
   <main class="auth-container">@RenderBody()</main>
 }
 <script src="~/js/site.js" asp-append-version="true"></script>
+<script src="~/js/pwa.js" asp-append-version="true"></script>
 @await RenderSectionAsync("Scripts",required:false)
 </body>
 </html>

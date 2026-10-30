@@ -58,7 +58,9 @@ public sealed class FinancialService(FinanceDbContext db,RecurringService recurr
         var start=new DateTime(year,1,1);var end=start.AddYears(1);
         await recurrence.EnsureThroughAsync(userId,end.AddDays(-1));
         var revenues=await db.Revenues.AsNoTracking().Where(x=>x.UserId==userId&&x.Date>=start&&x.Date<end).ToListAsync();
-        var expenses=await db.Expenses.AsNoTracking().Where(x=>x.UserId==userId&&x.Paid&&x.Date>=start&&x.Date<end).ToListAsync();
+        // Annual reports represent all registered commitments, whether paid or pending.
+        // Payment status is reported separately; no financial movement is modified.
+        var expenses=await db.Expenses.AsNoTracking().Where(x=>x.UserId==userId&&x.Date>=start&&x.Date<end).ToListAsync();
         var months=new List<MonthlyPoint>();
         for(var m=1;m<=12;m++){
             var income=revenues.Where(x=>x.Date.Month==m).Sum(x=>x.Amount);
@@ -66,6 +68,8 @@ public sealed class FinancialService(FinanceDbContext db,RecurringService recurr
             months.Add(new MonthlyPoint(year,m,Pt.DateTimeFormat.GetAbbreviatedMonthName(m).TrimEnd('.'),income,cost,income-cost));
         }
         return new ReportVm {Year=year,Revenue=revenues.Sum(x=>x.Amount),Expenses=expenses.Sum(x=>x.Amount),
+            PaidExpenses=expenses.Where(x=>x.Paid).Sum(x=>x.Amount),
+            PendingExpenses=expenses.Where(x=>!x.Paid).Sum(x=>x.Amount),
             SourceCount=revenues.Select(x=>x.RevenueItemName).Distinct().Count(),Months=months,
             Sources=revenues.GroupBy(x=>x.RevenueItemName).Select(x=>new NamedAmount(x.Key,x.Sum(y=>y.Amount))).OrderByDescending(x=>x.Amount).ToList(),
             Categories=expenses.GroupBy(x=>x.Category).Select(x=>new NamedAmount(x.Key,x.Sum(y=>y.Amount))).OrderByDescending(x=>x.Amount).ToList(),

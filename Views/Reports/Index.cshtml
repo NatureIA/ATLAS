@@ -1,16 +1,20 @@
 @model ReportVm
 @{ ViewData["Title"]="Relatórios"; }
-<div class="section-heading"><div><div class="eyebrow">HISTÓRICO ANUAL</div><h2>Uma visão completa do ano.</h2><p class="muted">Despesas anuais contabilizadas somente quando pagas.</p></div>
+<div class="section-heading"><div><div class="eyebrow">HISTÓRICO ANUAL</div><h2>Uma visão completa do ano.</h2><p class="muted">Todas as despesas registradas no ano, com valores pagos e pendentes separados.</p></div>
 <div class="period-picker"><a asp-action="Index" asp-route-year="@(Model.Year-1)">‹</a><strong>@Model.Year</strong><a asp-action="Index" asp-route-year="@(Model.Year+1)">›</a></div></div>
 <div class="metrics-grid">
-<div class="metric-card metric-primary"><div class="metric-label">Resultado anual</div><strong class="metric-number">@Model.Profit.ToString("C")</strong><small>Faturamento menos despesas pagas</small></div>
+<div class="metric-card metric-primary"><div class="metric-label">Resultado anual</div><strong class="metric-number">@Model.Profit.ToString("C")</strong><small>Faturamento menos todas as despesas do ano</small></div>
 <div class="metric-card"><div class="metric-label">Faturamento anual</div><strong class="metric-number">@Model.Revenue.ToString("C")</strong></div>
-<div class="metric-card"><div class="metric-label">Despesas pagas</div><strong class="metric-number">@Model.Expenses.ToString("C")</strong></div>
-<div class="metric-card"><div class="metric-label">Margem anual</div><strong class="metric-number">@Model.Margin.ToString("N1")%</strong><small>@Model.SourceCount origens com faturamento</small></div>
+<div class="metric-card"><div class="metric-label">Despesas totais</div><strong class="metric-number">@Model.Expenses.ToString("C")</strong><small>Pagas e pendentes</small></div>
+<div class="metric-card"><div class="metric-label">Margem após despesas</div><strong class="metric-number">@Model.Margin.ToString("N1")%</strong><small>@Model.SourceCount origens com faturamento</small></div>
 </div>
-<section class="card"><div class="card-title"><div><div class="eyebrow">JANEIRO A DEZEMBRO</div><h3>Desempenho mensal</h3></div></div><partial name="_Chart" model="Model.Months" /></section>
+<div class="report-payment-summary">
+  <div class="report-payment-stat"><span>Despesas pagas</span><strong>@Model.PaidExpenses.ToString("C")</strong><small>Compromissos já quitados no ano</small></div>
+  <div class="report-payment-stat"><span>Despesas pendentes</span><strong>@Model.PendingExpenses.ToString("C")</strong><small>Compromissos ainda não quitados no ano</small></div>
+</div>
+<section class="card"><div class="card-title"><div><div class="eyebrow">JANEIRO A DEZEMBRO</div><h3>Desempenho mensal — despesas totais</h3></div></div><partial name="_Chart" model="Model.Months" /></section>
 <div class="content-grid thirds">
 <section class="card"><div class="card-title"><div><div class="eyebrow">FATURAMENTO</div><h3>Por item de receita</h3></div></div><partial name="_Ranking" model="Model.Sources" /></section>
-<section class="card"><div class="card-title"><div><div class="eyebrow">CUSTOS</div><h3>Por categoria</h3></div></div><partial name="_Ranking" model="Model.Categories" /></section>
+<section class="card"><div class="card-title"><div><div class="eyebrow">CUSTOS</div><h3>Despesas por categoria</h3></div></div><partial name="_Ranking" model="Model.Categories" /></section>
 <section class="card"><div class="card-title"><div><div class="eyebrow">RECEBIMENTOS</div><h3>Formas de pagamento</h3></div></div><partial name="_Ranking" model="Model.Methods" /></section>
 </div>

@@ -103,14 +103,21 @@
 @media(max-width:660px){.atlas-login{grid-template-columns:1fr}.atlas-login-visual{min-height:280px;padding:27px 26px 31px;gap:24px}.atlas-login-brand strong{font-size:18px}.atlas-login-message{margin:8px 0}.atlas-login-message h1{font-size:clamp(30px,7.4vw,43px);line-height:1.12}.atlas-login-footer{font-size:10.5px}.atlas-login-panel{min-height:calc(100dvh - 280px);padding:48px 25px 60px;align-items:start}.atlas-login-content{width:min(100%,380px)}.atlas-login-content h2{font-size:26px}}
 @media(max-width:380px){.atlas-login-visual{min-height:260px;padding:23px}.atlas-login-message h1{font-size:29px}.atlas-login-panel{padding:36px 22px 50px}}
 
-/* ATLAS sidebar — paleta violeta consistente com o login e botoes primarios.
-   Apenas a navegacao lateral: mantem seu fundo branco e toda a logica intactos. */
-.sidebar .brand-mark{background:#6350e8;color:#fff;box-shadow:0 4px 12px #6350e822}
-.sidebar .nav-caption{color:#9184c9}
-.sidebar .main-nav a{transition:background .18s ease,color .18s ease}
-.sidebar .main-nav a:hover{background:#f7f5ff;color:#5340d7}
-.sidebar .main-nav a:hover .nav-icon{color:#6350e8;opacity:1}
-.sidebar .main-nav a.selected{background:#f1eeff;color:#4b3dc7}
-.sidebar .main-nav a.selected .nav-icon{color:#6350e8;opacity:1}
-.sidebar .sidebar-foot{border-top-color:#eae6fb}
-.sidebar .status-dot{background:#6350e8}
+/* ATLAS sidebar — fundo violeta integral, igual ao novo login.
+   Ajustes restritos à navegação lateral; sem alterações funcionais. */
+.sidebar{background:#6350e8;border-right-color:#5340d7;color:#fff}
+.sidebar .brand{color:#fff}
+.sidebar .brand strong{color:#fff}
+.sidebar .brand small{color:#e0dbff}
+.sidebar .brand-mark{background:#ffffff22;color:#fff;box-shadow:none}
+.sidebar .nav-caption{color:#d5ceff}
+.sidebar .main-nav a{color:#f0edff;transition:background .18s ease,color .18s ease}
+.sidebar .main-nav .nav-icon{color:#eeeaff;opacity:.9}
+.sidebar .main-nav a:hover{background:#ffffff20;color:#fff}
+.sidebar .main-nav a:hover .nav-icon{color:#fff;opacity:1}
+.sidebar .main-nav a.selected{background:#fff;color:#5340d7}
+.sidebar .main-nav a.selected .nav-icon{color:#5340d7;opacity:1}
+.sidebar .sidebar-foot{border-top-color:#ffffff40}
+.sidebar .sidebar-status{color:#fff}
+.sidebar .sidebar-foot small{color:#e0dbff}
+.sidebar .status-dot{background:#fff}

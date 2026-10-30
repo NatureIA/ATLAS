@@ -128,3 +128,11 @@
 .atlas-install-button:hover{background:#5340d7}
 .atlas-install-button:focus-visible{outline:3px solid #a9a2ff;outline-offset:3px}
 @media(max-width:760px){.atlas-install-button{right:16px;bottom:16px}}
+
+/* ATLAS PWA installation guidance, shown when automatic prompts are unavailable. */
+.atlas-install-help[hidden]{display:none!important}
+.atlas-install-help{position:fixed;right:22px;bottom:79px;z-index:81;width:min(340px,calc(100vw - 32px));padding:21px 22px;border:1px solid #e4e0fa;border-radius:15px;background:#fff;color:#25223a;box-shadow:0 12px 38px #15132c38;font-family:Inter,system-ui,sans-serif}
+.atlas-install-help strong{display:block;font-size:15px;margin-bottom:10px}
+.atlas-install-help p{margin:0 0 15px;font-size:12px;line-height:1.7}
+.atlas-install-help button{border:0;border-radius:8px;background:#6350e8;color:#fff;padding:9px 15px;font-size:12px;font-weight:700}
+@media(max-width:760px){.atlas-install-help{right:16px;bottom:72px}}

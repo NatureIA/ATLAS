@@ -56,3 +56,18 @@
 .report-performance-month-label{font-size:10px;color:#8d998f;text-align:center;padding-top:12px;text-transform:capitalize}
 .report-performance-empty{padding:36px 12px;text-align:center;color:#879389;font-size:12px;background:#fafbfa;border-radius:12px}
 @media(max-width:760px){.report-performance-flags{gap:8px}.report-flag{padding:9px 10px;font-size:10.5px}.report-performance-note{font-size:10.5px}.report-performance-plot{gap:9px}}
+
+/* Monthly financial area chart — report-only, responsive and touch friendly. */
+.report-area-chart{position:relative;width:100%;min-width:0}
+.report-area-chart[hidden]{display:none}
+.report-area-svg{display:block;width:100%;height:auto;min-height:280px;overflow:visible;touch-action:pan-y;cursor:crosshair}
+.report-area-svg path{vector-effect:non-scaling-stroke}
+.report-area-svg circle[tabindex]:focus-visible{outline:none;stroke:#183729;stroke-width:3}
+.report-area-tooltip{display:none;position:absolute;top:6px;transform:translateX(-50%);z-index:3;pointer-events:none;background:#fff;border:1px solid #e1e9e2;box-shadow:0 13px 34px #10221a1a;border-radius:12px;padding:12px 14px;min-width:165px;max-width:235px;line-height:1.35}
+.report-area-tooltip.visible{display:block}
+.report-area-tooltip>strong{font-size:11px;font-weight:750;text-transform:capitalize;color:#24382c;display:block;margin-bottom:8px}
+.report-area-tooltip-row{display:grid;grid-template-columns:8px 1fr auto;align-items:center;gap:7px;padding:3px 0;color:#718074;font-size:10px}
+.report-area-tooltip-row b{font-size:10.5px;color:#26332a;white-space:nowrap}
+.report-area-tooltip-dot{width:8px;height:8px;border-radius:50%}
+.report-area-data{display:none}
+@media(max-width:760px){.report-area-chart{overflow-x:auto;overflow-y:visible}.report-area-svg{min-width:760px;min-height:250px}.report-area-tooltip{position:sticky;left:50%!important;top:0;transform:translateX(-50%);margin-top:-1px;width:max-content}.report-performance-note{margin-bottom:15px}}

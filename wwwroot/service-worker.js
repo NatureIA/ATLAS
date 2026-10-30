@@ -1,6 +1,6 @@
 /* ATLAS PWA: only public static assets may be cached.
    Financial responses, navigation, authentication and user data are network-only. */
-const CACHE_NAME = 'atlas-static-v3';
+const CACHE_NAME = 'atlas-static-v4';
 const STATIC_ASSETS = [
   '/css/site.css',
   '/js/site.js',

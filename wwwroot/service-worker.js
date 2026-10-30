@@ -1,5 +1,5 @@
 /* ATLAS PWA: never cache authenticated HTML, forms, financial endpoints or SQL data. */
-const CACHE_NAME = 'atlas-static-v5';
+const CACHE_NAME = 'atlas-static-v6';
 const STATIC_ASSETS = ['/css/site.css', '/js/site.js', '/js/pwa.js', '/manifest.webmanifest', '/icons/atlas-192.png', '/icons/atlas-512.png'];
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(STATIC_ASSETS)).then(() => self.skipWaiting()));

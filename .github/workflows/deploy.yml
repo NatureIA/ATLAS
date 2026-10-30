@@ -26,6 +26,8 @@ jobs:
         run: dotnet restore Atlas.csproj
       - name: Build
         run: dotnet build Atlas.csproj --configuration Release --no-restore
+      - name: Validate JavaScript syntax
+        run: node --check wwwroot/js/site.js
       - name: Publish
         run: dotnet publish Atlas.csproj --configuration Release --output ./publish --no-restore
       - name: Verify IIS handler settings in published web.config

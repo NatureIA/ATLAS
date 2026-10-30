@@ -20,6 +20,41 @@
   const newCategory=document.querySelector('#NewCategory');
   function syncCategory(){if(!category)return;const open=category.value==='__new__';categoryField?.classList.toggle('hidden',!open);if(newCategory)newCategory.required=open;}
   category?.addEventListener('change',syncCategory);syncCategory();
+  // Reports only: independently show/hide each financial series without a reload.
+  const performance=document.querySelector('#reportPerformance');
+  if(performance){
+    const toggles=[...performance.querySelectorAll('.report-performance-flags input[type="checkbox"]')];
+    const bars=[...performance.querySelectorAll('.report-performance-bar[data-series]')];
+    const plot=performance.querySelector('.report-performance-scroll');
+    const empty=performance.querySelector('.report-performance-empty');
+    function updatePerformance(){
+      const enabled=new Set(toggles.filter(input=>input.checked).map(input=>input.value));
+      let positiveMax=0;
+      let negativeMax=0;
+      bars.forEach(bar=>{
+        if(!enabled.has(bar.dataset.series))return;
+        const value=Math.max(0,Number(bar.dataset.value)||0);
+        if(bar.dataset.side==='negative')negativeMax=Math.max(negativeMax,value);
+        else positiveMax=Math.max(positiveMax,value);
+      });
+      const sum=positiveMax+negativeMax;
+      const availablePixels=210;
+      performance.style.setProperty('--report-positive-h',(sum>0?availablePixels*positiveMax/sum:availablePixels)+'px');
+      performance.style.setProperty('--report-negative-h',(sum>0?availablePixels*negativeMax/sum:0)+'px');
+      bars.forEach(bar=>{
+        const selected=enabled.has(bar.dataset.series);
+        const max=bar.dataset.side==='negative'?negativeMax:positiveMax;
+        const value=Math.max(0,Number(bar.dataset.value)||0);
+        bar.classList.toggle('is-omitted',!selected);
+        bar.style.height=selected&&max>0?(value/max*100)+'%':'0%';
+      });
+      const noSelection=enabled.size===0;
+      if(plot)plot.hidden=noSelection;
+      empty?.classList.toggle('hidden',!noSelection);
+    }
+    toggles.forEach(input=>input.addEventListener('change',updatePerformance));
+    updatePerformance();
+  }
   const group=document.querySelector('#installmentGroupForm');
   if(group){
     const number=group.querySelector('#Installments');

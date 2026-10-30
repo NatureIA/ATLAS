@@ -12,7 +12,7 @@
   <div class="report-payment-stat"><span>Despesas pagas</span><strong>@Model.PaidExpenses.ToString("C")</strong><small>Compromissos já quitados no ano</small></div>
   <div class="report-payment-stat"><span>Despesas pendentes</span><strong>@Model.PendingExpenses.ToString("C")</strong><small>Compromissos ainda não quitados no ano</small></div>
 </div>
-<section class="card"><div class="card-title"><div><div class="eyebrow">JANEIRO A DEZEMBRO</div><h3>Desempenho mensal — despesas totais</h3></div></div><partial name="_Chart" model="Model.Months" /></section>
+<section class="card"><div class="card-title"><div><div class="eyebrow">JANEIRO A DEZEMBRO</div><h3>Desempenho mensal</h3></div></div><partial name="_PerformanceChart" model="Model.Months" /></section>
 <div class="content-grid thirds">
 <section class="card"><div class="card-title"><div><div class="eyebrow">FATURAMENTO</div><h3>Por item de receita</h3></div></div><partial name="_Ranking" model="Model.Sources" /></section>
 <section class="card"><div class="card-title"><div><div class="eyebrow">CUSTOS</div><h3>Despesas por categoria</h3></div></div><partial name="_Ranking" model="Model.Categories" /></section>

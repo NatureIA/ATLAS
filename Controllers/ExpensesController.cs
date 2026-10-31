@@ -82,10 +82,13 @@ public class ExpensesController(FinanceDbContext db,CurrentUser current,AuditSer
     }
     [HttpPost,ValidateAntiForgeryToken] public async Task<IActionResult> Update(long id,ExpenseInput input,string? scope){
         Validate(input,false);
-        if(scope is not ("single" or "future")) ModelState.AddModelError("scope","Escolha se a alteração vale apenas para este mês ou também para os seguintes.");
         if(!ModelState.IsValid){input.Id=id;await Options(input);return View("Form",input);}
         var row=await db.Expenses.FirstOrDefaultAsync(x=>x.Id==id&&x.UserId==current.Id);
         if(row is null)return NotFound();
+        if(row.RecurringSeriesId!=null && scope is not ("single" or "future")){
+            ModelState.AddModelError("scope","Escolha se a alteração vale apenas para este mês ou também para os seguintes.");
+            input.Id=id;input.ExistingRecurring=true;await Options(input);return View("Form",input);
+        }
         if(row.InstallmentGroupId is Guid groupId)return RedirectToAction(nameof(Installments),new{id=groupId});
         var cat=input.Category=="__new__"?input.NewCategory!.Trim():input.Category;
         await using var tx=await db.Database.BeginTransactionAsync();

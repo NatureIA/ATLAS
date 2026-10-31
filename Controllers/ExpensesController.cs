@@ -80,25 +80,40 @@ public class ExpensesController(FinanceDbContext db,CurrentUser current,AuditSer
             Amount=x.Amount,PaymentMethod=x.PaymentMethod,Paid=x.Paid,Notes=x.Notes,ExistingRecurring=x.RecurringSeriesId!=null};
         await Options(vm);return View("Form",vm);
     }
-    [HttpPost,ValidateAntiForgeryToken] public async Task<IActionResult> Update(long id,ExpenseInput input){
+    [HttpPost,ValidateAntiForgeryToken] public async Task<IActionResult> Update(long id,ExpenseInput input,string? scope){
         Validate(input,false);
         if(!ModelState.IsValid){input.Id=id;await Options(input);return View("Form",input);}
         var row=await db.Expenses.FirstOrDefaultAsync(x=>x.Id==id&&x.UserId==current.Id);
         if(row is null)return NotFound();
+        if(row.RecurringSeriesId!=null && scope is not ("single" or "future")){
+            ModelState.AddModelError("scope","Escolha se a alteração vale apenas para este mês ou também para os seguintes.");
+            input.Id=id;input.ExistingRecurring=true;await Options(input);return View("Form",input);
+        }
         if(row.InstallmentGroupId is Guid groupId)return RedirectToAction(nameof(Installments),new{id=groupId});
         var cat=input.Category=="__new__"?input.NewCategory!.Trim():input.Category;
         await using var tx=await db.Database.BeginTransactionAsync();
         if(row.RecurringSeriesId is Guid seriesId){
             var series=await db.ExpenseSeries.FirstOrDefaultAsync(x=>x.Id==seriesId&&x.UserId==current.Id);
             if(series is null)return NotFound();
-            var future=await db.Expenses.Where(x=>x.UserId==current.Id&&x.RecurringSeriesId==seriesId&&x.Date>=row.Date).ToListAsync();
-            foreach(var entry in future)Apply(entry,input,cat,false);
-            row.Paid=input.Paid;
-            series.Description=input.Description.Trim();series.Category=cat;series.ExpenseType=input.ExpenseType;
-            series.Amount=input.Amount;series.PaymentMethod=input.PaymentMethod;series.Notes=input.Notes;series.UpdatedAt=DateTime.UtcNow;
-            recurrence.Revision(current.Id,seriesId,"expense",row.Date,new ExpenseSnapshot(series.Description,
-                cat,input.ExpenseType,input.Amount,input.PaymentMethod,input.Notes));
-            audit.Add("UPDATE","RecurringExpenseSeries",seriesId,new{effective=row.Date,input.Amount,cat});
+            if(scope=="single"){
+                Apply(row,input,cat,true);
+                audit.Add("UPDATE","RecurringExpenseOccurrence",row.Id,new {seriesId,month=RecurringService.Key(row.Date),scope,input.Amount,cat,input.Paid});
+            } else {
+                var future=await db.Expenses.Where(x=>x.UserId==current.Id&&x.RecurringSeriesId==seriesId&&x.Date>=row.Date).ToListAsync();
+                foreach(var entry in future)Apply(entry,input,cat,false);
+                row.Paid=input.Paid;
+                series.Description=input.Description.Trim();series.Category=cat;series.ExpenseType=input.ExpenseType;
+                series.Amount=input.Amount;series.PaymentMethod=input.PaymentMethod;series.Notes=input.Notes;series.UpdatedAt=DateTime.UtcNow;
+                // Later revisions must not restore an older amount when subsequent months are generated.
+                var from=RecurringService.Month(row.Date);
+                var later=await db.Revisions.Where(x=>x.UserId==current.Id&&x.SeriesId==seriesId&&x.Kind=="expense"&&x.EffectiveMonth>from).ToListAsync();
+                foreach(var revision in later)
+                    recurrence.Revision(current.Id,seriesId,"expense",revision.EffectiveMonth,
+                        new ExpenseSnapshot(input.Description.Trim(),cat,input.ExpenseType,input.Amount,input.PaymentMethod,input.Notes));
+                recurrence.Revision(current.Id,seriesId,"expense",row.Date,new ExpenseSnapshot(series.Description,
+                    cat,input.ExpenseType,input.Amount,input.PaymentMethod,input.Notes));
+                audit.Add("UPDATE","RecurringExpenseSeries",seriesId,new{effective=row.Date,scope,input.Amount,cat,updatedFutureRevisions=later.Count});
+            }
         } else {Apply(row,input,cat,true);audit.Add("UPDATE","ExpenseEntry",id,new{input.Amount,cat,input.Paid});}
         await db.SaveChangesAsync();await tx.CommitAsync();TempData["Success"]="Despesa atualizada.";return RedirectToAction("Index");
     }

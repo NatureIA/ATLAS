@@ -55,8 +55,10 @@ public class RevenueController(FinanceDbContext db,CurrentUser current,AuditServ
         await Options(vm);return View("Form",vm);
     }
     [HttpPost,ValidateAntiForgeryToken]
-    public async Task<IActionResult> Update(long id,RevenueInput input){
-        Validate(input);if(!ModelState.IsValid){input.Id=id;await Options(input);return View("Form",input);}
+    public async Task<IActionResult> Update(long id,RevenueInput input,string? scope){
+        Validate(input);
+        if(scope is not ("single" or "future")) ModelState.AddModelError("scope","Escolha se a alteração vale apenas para este mês ou também para os seguintes.");
+        if(!ModelState.IsValid){input.Id=id;await Options(input);return View("Form",input);}
         var row=await db.Revenues.FirstOrDefaultAsync(x=>x.Id==id&&x.UserId==current.Id);
         if(row is null)return NotFound();
         var name=input.ItemName=="__new__"?input.NewItemName!.Trim():input.ItemName.Trim();
@@ -65,13 +67,22 @@ public class RevenueController(FinanceDbContext db,CurrentUser current,AuditServ
         if(row.RecurringSeriesId is Guid seriesId){
             var serie=await db.RevenueSeries.FirstOrDefaultAsync(x=>x.Id==seriesId&&x.UserId==current.Id);
             if(serie is null)return NotFound();
-            var future=await db.Revenues.Where(x=>x.UserId==current.Id&&x.RecurringSeriesId==seriesId&&x.Date>=row.Date).ToListAsync();
-            foreach(var entry in future)Apply(entry,name,input);
-            serie.RevenueItemName=name;serie.Amount=input.Amount;serie.PaymentMethod=input.PaymentMethod;
-            serie.ReferenceName=input.ReferenceName;serie.Notes=input.Notes;serie.UpdatedAt=DateTime.UtcNow;
-            recurrence.Revision(current.Id,seriesId,"revenue",row.Date,
-                new RevenueSnapshot(name,input.Amount,input.PaymentMethod,input.ReferenceName,input.Notes));
-            audit.Add("UPDATE","RecurringRevenueSeries",seriesId,new {effective=row.Date,input.Amount,name});
+            if(scope=="single"){
+                Apply(row,name,input);
+                audit.Add("UPDATE","RecurringRevenueOccurrence",row.Id,new {seriesId,month=RecurringService.Key(row.Date),scope,input.Amount,name});
+            } else {
+                var future=await db.Revenues.Where(x=>x.UserId==current.Id&&x.RecurringSeriesId==seriesId&&x.Date>=row.Date).ToListAsync();
+                foreach(var entry in future)Apply(entry,name,input);
+                serie.RevenueItemName=name;serie.Amount=input.Amount;serie.PaymentMethod=input.PaymentMethod;
+                serie.ReferenceName=input.ReferenceName;serie.Notes=input.Notes;serie.UpdatedAt=DateTime.UtcNow;
+                // Later revisions must not re-apply an older amount when future months are generated.
+                var from=RecurringService.Month(row.Date);
+                var later=await db.Revisions.Where(x=>x.UserId==current.Id&&x.SeriesId==seriesId&&x.Kind=="revenue"&&x.EffectiveMonth>from).ToListAsync();
+                db.Revisions.RemoveRange(later);
+                recurrence.Revision(current.Id,seriesId,"revenue",row.Date,
+                    new RevenueSnapshot(name,input.Amount,input.PaymentMethod,input.ReferenceName,input.Notes));
+                audit.Add("UPDATE","RecurringRevenueSeries",seriesId,new {effective=row.Date,scope,input.Amount,name,overriddenRevisions=later.Count});
+            }
         } else {Apply(row,name,input);audit.Add("UPDATE","RevenueEntry",row.Id,new {input.Amount,name});}
         await db.SaveChangesAsync();await tx.CommitAsync();TempData["Success"]="Receita atualizada.";
         return RedirectToAction("Index");

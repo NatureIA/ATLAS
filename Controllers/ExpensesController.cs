@@ -107,10 +107,12 @@ public class ExpensesController(FinanceDbContext db,CurrentUser current,AuditSer
                 // Later revisions must not restore an older amount when subsequent months are generated.
                 var from=RecurringService.Month(row.Date);
                 var later=await db.Revisions.Where(x=>x.UserId==current.Id&&x.SeriesId==seriesId&&x.Kind=="expense"&&x.EffectiveMonth>from).ToListAsync();
-                db.Revisions.RemoveRange(later);
+                foreach(var revision in later)
+                    recurrence.Revision(current.Id,seriesId,"expense",revision.EffectiveMonth,
+                        new ExpenseSnapshot(input.Description.Trim(),cat,input.ExpenseType,input.Amount,input.PaymentMethod,input.Notes));
                 recurrence.Revision(current.Id,seriesId,"expense",row.Date,new ExpenseSnapshot(series.Description,
                     cat,input.ExpenseType,input.Amount,input.PaymentMethod,input.Notes));
-                audit.Add("UPDATE","RecurringExpenseSeries",seriesId,new{effective=row.Date,scope,input.Amount,cat,overriddenRevisions=later.Count});
+                audit.Add("UPDATE","RecurringExpenseSeries",seriesId,new{effective=row.Date,scope,input.Amount,cat,updatedFutureRevisions=later.Count});
             }
         } else {Apply(row,input,cat,true);audit.Add("UPDATE","ExpenseEntry",id,new{input.Amount,cat,input.Paid});}
         await db.SaveChangesAsync();await tx.CommitAsync();TempData["Success"]="Despesa atualizada.";return RedirectToAction("Index");

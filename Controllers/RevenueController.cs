@@ -81,10 +81,12 @@ public class RevenueController(FinanceDbContext db,CurrentUser current,AuditServ
                 // Later revisions must not re-apply an older amount when future months are generated.
                 var from=RecurringService.Month(row.Date);
                 var later=await db.Revisions.Where(x=>x.UserId==current.Id&&x.SeriesId==seriesId&&x.Kind=="revenue"&&x.EffectiveMonth>from).ToListAsync();
-                db.Revisions.RemoveRange(later);
+                foreach(var revision in later)
+                    recurrence.Revision(current.Id,seriesId,"revenue",revision.EffectiveMonth,
+                        new RevenueSnapshot(name,input.Amount,input.PaymentMethod,input.ReferenceName,input.Notes));
                 recurrence.Revision(current.Id,seriesId,"revenue",row.Date,
                     new RevenueSnapshot(name,input.Amount,input.PaymentMethod,input.ReferenceName,input.Notes));
-                audit.Add("UPDATE","RecurringRevenueSeries",seriesId,new {effective=row.Date,scope,input.Amount,name,overriddenRevisions=later.Count});
+                audit.Add("UPDATE","RecurringRevenueSeries",seriesId,new {effective=row.Date,scope,input.Amount,name,updatedFutureRevisions=later.Count});
             }
         } else {Apply(row,name,input);audit.Add("UPDATE","RevenueEntry",row.Id,new {input.Amount,name});}
         await db.SaveChangesAsync();await tx.CommitAsync();TempData["Success"]="Receita atualizada.";

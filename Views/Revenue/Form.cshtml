@@ -19,6 +19,6 @@
 <div class="field"><label asp-for="ReferenceName">Referência (opcional)</label><input asp-for="ReferenceName" maxlength="160" placeholder="Cliente ou descrição complementar" /></div>
 <div class="field full"><label asp-for="Notes">Observações</label><textarea asp-for="Notes" rows="4" maxlength="1000" placeholder="Informações adicionais"></textarea></div></div>
 @if(!edit){<div class="form-divider"></div><label class="toggle-row"><input asp-for="IsRecurring" type="checkbox" /><span><strong>Receita recorrente mensal</strong><small>Cria uma série que gera ocorrências em novas competências.</small></span></label>}
-else if(Model.ExistingRecurring){<div class="notice-inline">Esta receita é recorrente. A alteração afetará esta ocorrência e as seguintes, preservando os meses anteriores.</div>}
+else if(Model.ExistingRecurring){<div class="field full"><label for="recurringScopeRevenue">Aplicar alterações</label><select id="recurringScopeRevenue" name="scope" required><option value="single">Somente neste mês</option><option value="future">Neste mês e nos seguintes</option></select><small class="field-help">Os meses anteriores permanecem inalterados.</small></div>}
 <div class="form-actions"><a class="btn ghost" asp-action="Index">Cancelar</a><button class="btn dark" type="submit">@(edit?"Salvar alterações":"Registrar receita")</button></div>
 </form></div>

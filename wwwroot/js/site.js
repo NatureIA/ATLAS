@@ -91,6 +91,10 @@
       tooltip.setAttribute('aria-hidden','false');
     };
     function drawPerformance(){
+      const isDark=document.documentElement.getAttribute('data-atlas-theme')==='dark';
+      Object.assign(colors,isDark?{revenue:'#d4ff24',expense:'#1558c9',result:'#86aaff',loss:'#ff717d'}:{revenue:'#0e9065',expense:'#90a198',result:'#7152cb',loss:'#c15a69'});
+      const axisColor=isDark?'#b6c5e0':'#88998d';
+      const gridColor=isDark?'#30415e':'#e7ece8';
       const active=current();
       svg.replaceChildren();
       svg.setAttribute('viewBox','0 0 '+W+' '+H);
@@ -116,10 +120,10 @@
       for(let tick=0;tick<=4;tick++){
         const value=ymin+(range*tick/4);
         const py=y(value);
-        make('line',{x1:L,y1:py,x2:W-R,y2:py,stroke:'#e7ece8','stroke-width':'1','stroke-dasharray':'3 5'});
-        label(L-12,py+4,compact.format(value),{'text-anchor':'end','font-size':'12',fill:'#88998d'});
+        make('line',{x1:L,y1:py,x2:W-R,y2:py,stroke:gridColor,'stroke-width':'1','stroke-dasharray':'3 5'});
+        label(L-12,py+4,compact.format(value),{'text-anchor':'end','font-size':'12',fill:axisColor});
       }
-      make('line',{x1:L,y1:baseline,x2:W-R,y2:baseline,stroke:'#b8c5ba','stroke-width':'1.3'});
+      make('line',{x1:L,y1:baseline,x2:W-R,y2:baseline,stroke:isDark?'#4d638b':'#b8c5ba','stroke-width':'1.3'});
       data.forEach((point,i)=>{
         label(x(i),H-18,point.month,{'text-anchor':'middle','font-size':'12',fill:'#88998d'});
       });
@@ -139,10 +143,10 @@
         }else draw(key==='revenue'?'atlasAreaRevenue':'atlasAreaExpense',colors[key]);
       });
       // A single focus/hover guide reveals exact values without 36 permanent dots.
-      const guide=make('line',{x1:L,y1:T,x2:L,y2:B,stroke:'#a0b0a5','stroke-width':'1.1','stroke-dasharray':'4 4',visibility:'hidden'});
+      const guide=make('line',{x1:L,y1:T,x2:L,y2:B,stroke:isDark?'#7e99c8':'#a0b0a5','stroke-width':'1.1','stroke-dasharray':'4 4',visibility:'hidden'});
       const dots={};
       ['revenue','expense','result'].filter(key=>active.has(key)).forEach(key=>{
-        dots[key]=make('circle',{cx:L,cy:baseline,r:4,fill:'#fff',stroke:colors[key],'stroke-width':'2.8',visibility:'hidden'});
+        dots[key]=make('circle',{cx:L,cy:baseline,r:4,fill:isDark?'#0e1423':'#fff',stroke:colors[key],'stroke-width':'2.8',visibility:'hidden'});
       });
       function hover(index){
         const i=Math.max(0,Math.min(data.length-1,index));
@@ -175,6 +179,7 @@
       });
     }
     inputs.forEach(input=>input.addEventListener('change',drawPerformance));
+    document.addEventListener('atlas-theme-change',drawPerformance);
     drawPerformance();
   }
   const group=document.querySelector('#installmentGroupForm');

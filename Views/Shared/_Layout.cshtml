@@ -19,8 +19,17 @@
   <meta name="apple-mobile-web-app-title" content="ATLAS" />
   <link rel="manifest" href="/manifest.webmanifest" />
   <link rel="apple-touch-icon" href="/icons/atlas-192.png" />
+  @if(authenticated){
+    <script>
+      try {
+        if (localStorage.getItem('atlas-ui-theme') === 'dark')
+          document.documentElement.setAttribute('data-atlas-theme', 'dark');
+      } catch (_) {}
+    </script>
+  }
   <title>@title · ATLAS</title>
   <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+  <link rel="stylesheet" href="~/css/theme.css" asp-append-version="true" />
 </head>
 <body class="@(authenticated?"app-body":"auth-body")">
 @if(authenticated){
@@ -37,6 +46,11 @@
       <a class="@(path.StartsWith("/reports")?"selected":"")" asp-controller="Reports" asp-action="Index"><span class="nav-icon">▥</span> Relatórios</a>
     </nav>
     <div class="sidebar-spacer"></div>
+    <button id="atlasThemeToggle" class="atlas-theme-toggle" type="button" aria-pressed="false" aria-label="Ativar tema escuro">
+      <span class="theme-toggle-icon" aria-hidden="true">☾</span>
+      <span class="theme-toggle-text">Tema escuro</span>
+      <span class="theme-toggle-state" aria-hidden="true">CLARO</span>
+    </button>
     <div class="sidebar-foot"><div class="sidebar-status"><span class="status-dot"></span> Seu ambiente financeiro</div><small>Organizado para decisões melhores.</small></div>
   </aside>
   <div class="workspace">
@@ -60,6 +74,7 @@
 }else{
   <main class="auth-container">@RenderBody()</main>
 }
+<script src="~/js/theme.js" asp-append-version="true"></script>
 <script src="~/js/site.js" asp-append-version="true"></script>
 <script src="~/js/pwa.js" asp-append-version="true"></script>
 @await RenderSectionAsync("Scripts",required:false)

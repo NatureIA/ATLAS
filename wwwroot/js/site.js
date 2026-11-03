@@ -20,6 +20,60 @@
   const newCategory=document.querySelector('#NewCategory');
   function syncCategory(){if(!category)return;const open=category.value==='__new__';categoryField?.classList.toggle('hidden',!open);if(newCategory)newCategory.required=open;}
   category?.addEventListener('change',syncCategory);syncCategory();
+  // Dashboard six-month chart: independent series, signed net result and proportional rescaling.
+  const dashboardChart=document.querySelector('#dashboardFinanceChart');
+  if(dashboardChart){
+    const checkboxes=[...dashboardChart.querySelectorAll('.dashboard-chart-filters input[type="checkbox"]')];
+    const months=[...dashboardChart.querySelectorAll('.dashboard-chart-month')].map(node=>({
+      node,
+      revenue:Number(node.dataset.revenue)||0,
+      expense:Number(node.dataset.expense)||0,
+      result:Number(node.dataset.result)||0
+    }));
+    const currency=new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'});
+    const monthsContainer=dashboardChart.querySelector('.dashboard-chart-scroll');
+    const empty=dashboardChart.querySelector('.dashboard-chart-empty');
+    const note=dashboardChart.querySelector('.dashboard-chart-note');
+    function drawDashboard(){
+      const active=new Set(checkboxes.filter(box=>box.checked).map(box=>box.value));
+      const none=active.size===0;
+      if(monthsContainer)monthsContainer.hidden=none;
+      empty?.classList.toggle('hidden',!none);
+      if(note)note.hidden=none;
+      if(none)return;
+      const positiveValues=months.flatMap(month=>[0,...[...active].map(key=>Math.max(0,month[key]))]);
+      const negativeValues=active.has('result')?months.map(month=>Math.max(0,-month.result)):[];
+      const positiveMax=Math.max(1,...positiveValues);
+      const negativeMax=Math.max(0,...negativeValues);
+      const positiveHeight=negativeMax>0?159:203;
+      const negativeHeight=negativeMax>0?44:0;
+      dashboardChart.style.setProperty('--dashboard-positive-height',positiveHeight+'px');
+      dashboardChart.style.setProperty('--dashboard-negative-height',negativeHeight+'px');
+      for(const month of months){
+        const data={revenue:month.revenue,expense:month.expense,result:month.result};
+        month.node.querySelectorAll('.dashboard-chart-slot').forEach(slot=>{
+          const bar=slot.querySelector('.dashboard-chart-bar');
+          if(!bar)return;
+          const key=bar.dataset.series;
+          slot.hidden=!active.has(key);
+          if(slot.hidden)return;
+          const negative=bar.dataset.sign==='negative';
+          const value=negative?Math.max(0,-data[key]):Math.max(0,data[key]);
+          const maximum=negative?negativeMax:positiveMax;
+          const limit=negative?negativeHeight:positiveHeight;
+          bar.hidden=value===0;
+          bar.style.height=(value>0 && maximum>0 ? Math.max(2,value/maximum*limit) : 0)+'px';
+          bar.title=(key==='revenue'?'Faturamento':key==='expense'?'Despesas':'Resultado')+': '+currency.format(data[key]);
+          bar.setAttribute('role','img');
+          bar.setAttribute('aria-label',month.node.dataset.month+' — '+bar.title);
+        });
+        const loss=month.node.querySelector('.dashboard-chart-negative');
+        if(loss)loss.hidden=negativeHeight===0;
+      }
+    }
+    checkboxes.forEach(input=>input.addEventListener('change',drawDashboard));
+    drawDashboard();
+  }
   // Reports only: responsive SVG area curves, shared zero baseline and independent flags.
   const performance=document.querySelector('#reportPerformance');
   if(performance){

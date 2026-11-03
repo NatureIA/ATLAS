@@ -26,6 +26,7 @@
   toggle.addEventListener('click', () => {
     const next = getCurrent() === 'dark' ? 'light' : 'dark';
     apply(next);
+    document.dispatchEvent(new Event('atlas-theme-change'));
     try { window.localStorage.setItem(key, next); } catch (_) {}
   });
 })();

@@ -168,3 +168,20 @@ html[data-atlas-theme="dark"] .metric-primary small{color:#d6e5ff}
 html[data-atlas-theme="dark"] .table-scroll .link-action{color:#bcd1fa}
 html[data-atlas-theme="dark"] .table-scroll .link-action.danger{color:#ff8993}
 html[data-atlas-theme="dark"] .table-scroll .link-action.success-text{color:#d4ff24}
+
+/* Dashboard comparison chart in Midnight Black / Cobalt / Acid Lime. */
+html[data-atlas-theme="dark"] .dashboard-chart-filters legend{color:#b7c8e7}
+html[data-atlas-theme="dark"] .dashboard-chart-filter{background:#111d35;border-color:#2b4063;color:#e4edff}
+html[data-atlas-theme="dark"] .dashboard-chart-filter:has(input:not(:checked)){background:#11182a;opacity:.62}
+html[data-atlas-theme="dark"] .dashboard-chart-filter input{accent-color:#1558c9}
+html[data-atlas-theme="dark"] .dashboard-chart-filter-revenue .dashboard-chart-swatch,
+html[data-atlas-theme="dark"] .dashboard-chart-bar.revenue{background:#d4ff24}
+html[data-atlas-theme="dark"] .dashboard-chart-filter-expense .dashboard-chart-swatch,
+html[data-atlas-theme="dark"] .dashboard-chart-bar.expense{background:#1558c9}
+html[data-atlas-theme="dark"] .dashboard-chart-filter-result .dashboard-chart-swatch,
+html[data-atlas-theme="dark"] .dashboard-chart-bar.result{background:#86aaff}
+html[data-atlas-theme="dark"] .dashboard-chart-bar.loss{background:#ff717d}
+html[data-atlas-theme="dark"] .dashboard-chart-positive{border-color:#304668}
+html[data-atlas-theme="dark"] .dashboard-chart-month-label,
+html[data-atlas-theme="dark"] .dashboard-chart-note,
+html[data-atlas-theme="dark"] .dashboard-chart-empty{color:#a7b9d7}

@@ -1,13 +1,62 @@
 @model List<MonthlyPoint>
-@{ var largest=Math.Max(1m,Model.SelectMany(p=>new[]{p.Income,p.Expense}).DefaultIfEmpty(0).Max()); }
-<div class="chart" role="img" aria-label="Comparação mensal de faturamento e despesas">
-  @foreach(var point in Model){
-    var h1=Math.Max(2m,Math.Round(point.Income/largest*100,1));
-    var h2=Math.Max(2m,Math.Round(point.Expense/largest*100,1));
-    <div class="chart-month"><div class="chart-bars">
-      <div class="bar revenue" style="height:@(h1.ToString(CultureInfo.InvariantCulture))%" title="Receitas: @point.Income.ToString("C")"></div>
-      <div class="bar expense" style="height:@(h2.ToString(CultureInfo.InvariantCulture))%" title="Despesas: @point.Expense.ToString("C")"></div>
-    </div><span>@point.Label</span></div>
-  }
+@{
+  // The dashboard uses the same signed monthly result already calculated by FinancialService.
+  var largestPositive=Math.Max(1m,Model.SelectMany(p=>new[]{p.Income,p.Expense,Math.Max(0m,p.Result)}).DefaultIfEmpty(0m).Max());
+  var largestNegative=Math.Max(0m,Model.Select(p=>Math.Max(0m,-p.Result)).DefaultIfEmpty(0m).Max());
+  var hasNegative=largestNegative>0;
+  var positivePixels=hasNegative?159m:203m;
+  var negativePixels=hasNegative?44m:0m;
+}
+<div class="dashboard-finance-chart" id="dashboardFinanceChart"
+     style="--dashboard-positive-height:@(positivePixels.ToString(CultureInfo.InvariantCulture))px;--dashboard-negative-height:@(negativePixels.ToString(CultureInfo.InvariantCulture))px">
+  <fieldset class="dashboard-chart-filters" aria-label="Séries do gráfico de evolução financeira">
+    <legend>Exibir no gráfico</legend>
+    <label class="dashboard-chart-filter dashboard-chart-filter-revenue">
+      <input type="checkbox" value="revenue" checked />
+      <span class="dashboard-chart-swatch" aria-hidden="true"></span> Faturamento
+    </label>
+    <label class="dashboard-chart-filter dashboard-chart-filter-expense">
+      <input type="checkbox" value="expense" checked />
+      <span class="dashboard-chart-swatch" aria-hidden="true"></span> Despesas
+    </label>
+    <label class="dashboard-chart-filter dashboard-chart-filter-result">
+      <input type="checkbox" value="result" checked />
+      <span class="dashboard-chart-swatch" aria-hidden="true"></span> Resultado
+    </label>
+  </fieldset>
+  <div class="dashboard-chart-scroll">
+    <div class="dashboard-chart-months" role="group" aria-label="Comparação dos últimos seis meses">
+      @foreach(var point in Model){
+        var resultPositive=Math.Max(0m,point.Result);
+        var resultNegative=Math.Max(0m,-point.Result);
+        var incomeHeight=point.Income>0?Math.Max(2m,point.Income/largestPositive*positivePixels):0m;
+        var expenseHeight=point.Expense>0?Math.Max(2m,point.Expense/largestPositive*positivePixels):0m;
+        var resultHeight=resultPositive>0?Math.Max(2m,resultPositive/largestPositive*positivePixels):0m;
+        var lossHeight=largestNegative>0&&resultNegative>0?Math.Max(2m,resultNegative/largestNegative*negativePixels):0m;
+        <div class="dashboard-chart-month" data-month="@point.Label" data-revenue="@point.Income.ToString(CultureInfo.InvariantCulture)" data-expense="@point.Expense.ToString(CultureInfo.InvariantCulture)" data-result="@point.Result.ToString(CultureInfo.InvariantCulture)">
+          <div class="dashboard-chart-positive">
+            <div class="dashboard-chart-slot">
+              <div class="dashboard-chart-bar revenue" data-series="revenue" style="height:@(incomeHeight.ToString(CultureInfo.InvariantCulture))px" title="Faturamento: @point.Income.ToString("C")"></div>
+            </div>
+            <div class="dashboard-chart-slot">
+              <div class="dashboard-chart-bar expense" data-series="expense" style="height:@(expenseHeight.ToString(CultureInfo.InvariantCulture))px" title="Despesas: @point.Expense.ToString("C")"></div>
+            </div>
+            <div class="dashboard-chart-slot">
+              <div class="dashboard-chart-bar result" data-series="result" data-sign="positive" style="height:@(resultHeight.ToString(CultureInfo.InvariantCulture))px" title="Resultado: @point.Result.ToString("C")"></div>
+            </div>
+          </div>
+          <div class="dashboard-chart-negative">
+            <div class="dashboard-chart-slot"></div>
+            <div class="dashboard-chart-slot"></div>
+            <div class="dashboard-chart-slot">
+              <div class="dashboard-chart-bar loss" data-series="result" data-sign="negative" style="height:@(lossHeight.ToString(CultureInfo.InvariantCulture))px" title="Resultado: @point.Result.ToString("C")"></div>
+            </div>
+          </div>
+          <span class="dashboard-chart-month-label">@point.Label</span>
+        </div>
+      }
+    </div>
+  </div>
+  <p class="dashboard-chart-empty hidden" role="status">Selecione Faturamento, Despesas ou Resultado para visualizar o gráfico.</p>
+  <p class="dashboard-chart-note">Resultado = faturamento − despesas. Valores negativos aparecem abaixo da linha zero.</p>
 </div>
-<div class="chart-legend"><span><i class="legend-revenue"></i> Faturamento</span><span><i class="legend-expense"></i> Despesas</span></div>

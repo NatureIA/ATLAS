@@ -136,3 +136,37 @@
 .atlas-install-help p{margin:0 0 15px;font-size:12px;line-height:1.7}
 .atlas-install-help button{border:0;border-radius:8px;background:#6350e8;color:#fff;padding:9px 15px;font-size:12px;font-weight:700}
 @media(max-width:760px){.atlas-install-help{right:16px;bottom:72px}}
+
+/* Dashboard: interactive six-month comparison with signed net result. */
+.dashboard-finance-chart{min-width:0}
+.dashboard-chart-filters{display:flex;flex-wrap:wrap;align-items:center;gap:8px;border:0;padding:0;margin:0 0 17px;min-width:0}
+.dashboard-chart-filters legend{display:block;float:left;width:100%;font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#8a958d;margin-bottom:8px}
+.dashboard-chart-filter{display:inline-flex;align-items:center;gap:7px;padding:8px 10px;border:1px solid #e0e6df;background:#fbfcfb;border-radius:9px;font-size:10.5px;font-weight:650;color:#465349;cursor:pointer;user-select:none}
+.dashboard-chart-filter:has(input:not(:checked)){opacity:.52;background:#f6f7f5}
+.dashboard-chart-filter:focus-within{outline:2px solid #9278eb;outline-offset:2px}
+.dashboard-chart-filter input{width:15px;height:15px;accent-color:#6350e8;margin:0;cursor:pointer}
+.dashboard-chart-swatch{width:9px;height:9px;border-radius:3px;flex:none}
+.dashboard-chart-filter-revenue .dashboard-chart-swatch{background:#0c8b65}
+.dashboard-chart-filter-expense .dashboard-chart-swatch{background:#d4dcd5}
+.dashboard-chart-filter-result .dashboard-chart-swatch{background:#7152cb}
+.dashboard-chart-scroll{max-width:100%;overflow-x:auto;padding:0 0 4px}
+.dashboard-chart-months{min-width:320px;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px;align-items:start}
+.dashboard-chart-month{min-width:0;display:flex;flex-direction:column;align-items:stretch}
+.dashboard-chart-positive,.dashboard-chart-negative{display:flex;justify-content:center;align-items:stretch;gap:5px;min-width:0}
+.dashboard-chart-positive{height:var(--dashboard-positive-height,203px);border-bottom:1px solid #dce4dc;align-items:end}
+.dashboard-chart-negative{height:var(--dashboard-negative-height,0px);align-items:start}
+.dashboard-chart-negative[hidden]{display:none}
+.dashboard-chart-slot{flex:0 1 28px;max-width:28px;min-width:0;height:100%;display:flex;align-items:end;justify-content:center}
+.dashboard-chart-negative .dashboard-chart-slot{align-items:start}
+.dashboard-chart-slot[hidden]{display:none}
+.dashboard-chart-bar{width:100%;border-radius:5px 5px 0 0;min-height:0;transition:height .2s ease}
+.dashboard-chart-bar.revenue{background:#0c8b65}
+.dashboard-chart-bar.expense{background:#d4dcd5}
+.dashboard-chart-bar.result{background:#7152cb}
+.dashboard-chart-bar.loss{background:#c94c4c;border-radius:0 0 5px 5px}
+.dashboard-chart-bar[hidden]{display:none}
+.dashboard-chart-month-label{font-size:10.5px;color:#929b94;text-align:center;margin-top:11px;text-transform:capitalize}
+.dashboard-chart-note{font-size:10px;color:#929b94;margin:15px 0 0;line-height:1.6}
+.dashboard-chart-empty{padding:50px 10px;text-align:center;color:#8b948e;font-size:11px}
+@media(max-width:760px){.dashboard-chart-months{gap:5px}.dashboard-chart-positive,.dashboard-chart-negative{gap:3px}.dashboard-chart-filters{gap:6px}.dashboard-chart-filter{padding:7px 8px;font-size:10px}}
+@media(prefers-reduced-motion:reduce){.dashboard-chart-bar{transition:none}}

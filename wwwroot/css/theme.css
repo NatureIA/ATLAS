@@ -139,3 +139,32 @@ html[data-atlas-theme="dark"] .atlas-install-help button{background:#1558c9;colo
 html[data-atlas-theme="dark"] .toast.success{background:#173624;color:#d4ff24;border-color:#36572b}
 html[data-atlas-theme="dark"] .toast.error{background:#3a1825;color:#ffb0b9;border-color:#713046}
 @media (prefers-reduced-motion:reduce){.atlas-theme-toggle{transition:none}}
+
+/* Financial report and installment details */
+html[data-atlas-theme="dark"] .installment-summary>div{background:#101b31;border-color:#2b3c5d}
+html[data-atlas-theme="dark"] .report-performance-flags legend{color:#b7c8e7}
+html[data-atlas-theme="dark"] .report-flag-revenue .report-flag-mark{background:#d4ff24}
+html[data-atlas-theme="dark"] .report-flag-expense .report-flag-mark{background:#1558c9}
+html[data-atlas-theme="dark"] .report-flag-result .report-flag-mark{background:#86aaff}
+html[data-atlas-theme="dark"] .report-flag input{accent-color:#1558c9}
+html[data-atlas-theme="dark"] .report-area-tooltip>strong{color:#eff4ff}
+html[data-atlas-theme="dark"] .report-area-tooltip-row{color:#bac8e1}
+html[data-atlas-theme="dark"] .chart-month>span,
+html[data-atlas-theme="dark"] .chart-legend,
+html[data-atlas-theme="dark"] .rank-item small,
+html[data-atlas-theme="dark"] .catalog-title small,
+html[data-atlas-theme="dark"] .goal-entry small,
+html[data-atlas-theme="dark"] .toggle-row small{color:#a3b3ce}
+html[data-atlas-theme="dark"] .currency-input>span{color:#b3c3e5}
+html[data-atlas-theme="dark"] .report-performance-positive{border-bottom-color:#304668}
+html[data-atlas-theme="dark"] .report-bar-revenue{background:#d4ff24}
+html[data-atlas-theme="dark"] .report-bar-expense{background:#1558c9}
+html[data-atlas-theme="dark"] .report-bar-result{background:#86aaff}
+html[data-atlas-theme="dark"] .report-performance-placeholder{color:#93a8ce}
+html[data-atlas-theme="dark"] .topbar .eyebrow{color:#96b7fa}
+html[data-atlas-theme="dark"] .metric-card small,
+html[data-atlas-theme="dark"] .summary-secondary small{color:#b2c0dc}
+html[data-atlas-theme="dark"] .metric-primary small{color:#d6e5ff}
+html[data-atlas-theme="dark"] .table-scroll .link-action{color:#bcd1fa}
+html[data-atlas-theme="dark"] .table-scroll .link-action.danger{color:#ff8993}
+html[data-atlas-theme="dark"] .table-scroll .link-action.success-text{color:#d4ff24}

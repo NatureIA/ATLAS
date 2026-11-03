@@ -3,7 +3,7 @@ using Atlas.Domain;
 
 namespace Atlas.ViewModels;
 public class LoginInput {
-    [Required,EmailAddress] public string Email {get;set;}="";
+    [Required,MaxLength(180)] public string Email {get;set;}="";
     [Required] public string Password {get;set;}="";
     public string? ReturnUrl {get;set;}
 }

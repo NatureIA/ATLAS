@@ -44,6 +44,9 @@ public class AuthController(FinanceDbContext db,PasswordService passwords,IConfi
     }
     [HttpPost,ValidateAntiForgeryToken]
     public async Task<IActionResult> Setup(SetupInput input){
+        // O login aceita nomes, mas o cadastro administrativo inicial continua exigindo e-mail válido.
+        if(!new System.ComponentModel.DataAnnotations.EmailAddressAttribute().IsValid(input.Email))
+            ModelState.AddModelError(nameof(input.Email),"Informe um e-mail válido.");
         if(input.Password.Length<12)ModelState.AddModelError(nameof(input.Password),"Senha deve ter ao menos 12 caracteres.");
         if(!ModelState.IsValid)return View(input);
         var key=config["ATLAS_SETUP_KEY"]??"";

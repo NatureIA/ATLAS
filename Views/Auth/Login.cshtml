@@ -21,7 +21,7 @@
         <input type="hidden" asp-for="ReturnUrl" />
         <div class="atlas-login-field">
           <label asp-for="Email">E-mail</label>
-          <input asp-for="Email" type="email" autocomplete="username" inputmode="email" required />
+          <input asp-for="Email" type="text" autocomplete="username" inputmode="text" maxlength="180" placeholder="E-mail ou nome de usuário" required />
           <span asp-validation-for="Email" class="validation"></span>
         </div>
         <div class="atlas-login-field">

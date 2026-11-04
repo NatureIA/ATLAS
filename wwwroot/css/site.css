@@ -352,3 +352,42 @@ a.atlas-overview-metric:focus-visible,.atlas-attention-item:focus-visible,.atlas
 @media(max-width:1050px){.atlas-month-forecast-chart{overflow-x:auto;grid-template-columns:repeat(12,minmax(52px,1fr))}.atlas-month-forecast-column{grid-column:span 2}}
 @media(max-width:650px){.atlas-month-forecast-chart{gap:4px;padding:12px 7px;grid-template-columns:repeat(12,minmax(38px,1fr))}.atlas-month-forecast-bars{height:130px;gap:4px}.atlas-month-forecast-month,.atlas-month-forecast-result{font-size:9px}.atlas-month-forecast-legend{margin-top:12px}}
 @media(prefers-reduced-motion:reduce){.atlas-month-forecast-bar{transition:none}}
+
+
+/* PR #40: monthly projection uses one chronological row, never a two-row grid. */
+.atlas-month-forecast-chart{
+  display:flex;
+  flex-wrap:nowrap;
+  align-items:stretch;
+  overflow-x:auto;
+  overflow-y:hidden;
+  gap:10px;
+  padding:16px 12px 12px;
+  scrollbar-width:thin;
+  scroll-snap-type:x proximity;
+}
+.atlas-month-forecast-column{
+  grid-column:auto;
+  flex:0 0 max(94px,calc((100% - (var(--forecast-visible,6) - 1)*10px)/var(--forecast-visible,6)));
+  width:auto;
+  box-sizing:border-box;
+  scroll-snap-align:start;
+  gap:7px;
+  padding:8px 3px 11px;
+}
+.atlas-month-forecast-column[hidden]{display:none!important}
+.atlas-month-forecast-bars{height:148px;flex:0 0 148px;gap:6px}
+.atlas-month-forecast-bar{max-width:32px;width:27%;border-radius:5px 5px 0 0}
+.atlas-month-forecast-month{font-size:11px}
+.atlas-month-forecast-result{font-size:10px;font-weight:700;white-space:nowrap}
+@media(max-width:1050px){
+  .atlas-month-forecast-chart{display:flex;flex-wrap:nowrap;overflow-x:auto;gap:9px}
+  .atlas-month-forecast-column{grid-column:auto;flex-basis:max(94px,calc((100% - (var(--forecast-visible,6) - 1)*9px)/var(--forecast-visible,6)))}
+}
+@media(max-width:650px){
+  .atlas-month-forecast-chart{display:flex;flex-wrap:nowrap;gap:8px;padding:12px 8px}
+  .atlas-month-forecast-column{flex-basis:max(100px,calc((100% - (var(--forecast-visible,6) - 1)*8px)/var(--forecast-visible,6)))}
+  .atlas-month-forecast-bars{height:125px;flex-basis:125px;gap:5px}
+  .atlas-month-forecast-month{font-size:10px}
+  .atlas-month-forecast-result{font-size:9px}
+}

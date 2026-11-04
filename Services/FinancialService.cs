@@ -46,6 +46,8 @@ public sealed class FinancialService(FinanceDbContext db,RecurringService recurr
             history.Add(new MonthlyPoint(d.Year,d.Month,Pt.DateTimeFormat.GetAbbreviatedMonthName(d.Month).TrimEnd('.'),rr,ee,rr-ee));
         }
         return new DashboardVm {Year=year,Month=month,Revenue=revenue,Expenses=expenses,SalesCount=monthRevenue.Count,
+            ReceivedRevenue=monthRevenue.Where(x=>x.Received).Sum(x=>x.Amount),
+            PendingRevenue=monthRevenue.Where(x=>!x.Received).Sum(x=>x.Amount),
             ProjectedRevenue=projected,Target=target,DailyNeeded=dailyNeeded,Insight=insight,History=history,
             Sources=monthRevenue.GroupBy(x=>x.RevenueItemName).Select(x=>new NamedAmount(x.Key,x.Sum(y=>y.Amount)))
                 .OrderByDescending(x=>x.Amount).Take(6).ToList(),
@@ -68,6 +70,8 @@ public sealed class FinancialService(FinanceDbContext db,RecurringService recurr
             months.Add(new MonthlyPoint(year,m,Pt.DateTimeFormat.GetAbbreviatedMonthName(m).TrimEnd('.'),income,cost,income-cost));
         }
         return new ReportVm {Year=year,Revenue=revenues.Sum(x=>x.Amount),Expenses=expenses.Sum(x=>x.Amount),
+            ReceivedRevenue=revenues.Where(x=>x.Received).Sum(x=>x.Amount),
+            PendingRevenue=revenues.Where(x=>!x.Received).Sum(x=>x.Amount),
             PaidExpenses=expenses.Where(x=>x.Paid).Sum(x=>x.Amount),
             PendingExpenses=expenses.Where(x=>!x.Paid).Sum(x=>x.Amount),
             SourceCount=revenues.Select(x=>x.RevenueItemName).Distinct().Count(),Months=months,

@@ -18,10 +18,12 @@ public sealed class FinancialService(FinanceDbContext db,RecurringService recurr
         var end=fullYear?start.AddYears(1):start.AddMonths(1);
         var today=TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow,
             TimeZoneInfo.FindSystemTimeZoneById("America/Sao_Paulo")).Date;
+        var monthStart=new DateTime(today.Year,today.Month,1);
+        var forecastEnd=monthStart.AddMonths(12);
         var horizon=today.AddDays(90);
         // Recurring entries are generated only through the required horizon.
         // Previously recorded financial rows and historical statuses are not rewritten.
-        await recurrence.EnsureThroughAsync(userId,end.AddDays(-1)>horizon?end.AddDays(-1):horizon);
+        await recurrence.EnsureThroughAsync(userId,end.AddDays(-1)>forecastEnd.AddDays(-1)?end.AddDays(-1):forecastEnd.AddDays(-1));
         var chartStart=fullYear?start:start.AddMonths(-5);
         var revenues=await db.Revenues.AsNoTracking()
             .Where(x=>x.UserId==userId && x.Date>=chartStart && x.Date<end).ToListAsync();
@@ -38,10 +40,10 @@ public sealed class FinancialService(FinanceDbContext db,RecurringService recurr
         // Attention is based on actual due/expected dates, independent of the selected competence.
         var outstandingExpenses=await db.Expenses.AsNoTracking()
             .Where(x=>x.UserId==userId && !x.Paid && x.DueDate!=null)
-            .Select(x=>new {x.Amount,x.DueDate}).ToListAsync();
+            .Select(x=>new {x.Id,x.Description,x.Amount,x.DueDate}).ToListAsync();
         var outstandingRevenues=await db.Revenues.AsNoTracking()
             .Where(x=>x.UserId==userId && !x.Received && x.ExpectedReceiptDate!=null)
-            .Select(x=>new {x.Amount,x.ExpectedReceiptDate}).ToListAsync();
+            .Select(x=>new {x.Id,x.RevenueItemName,x.Amount,x.ExpectedReceiptDate}).ToListAsync();
         var lateExpenses=outstandingExpenses.Where(x=>x.DueDate!.Value.Date<today).ToList();
         var lateReceipts=outstandingRevenues.Where(x=>x.ExpectedReceiptDate!.Value.Date<today).ToList();
         var dueExpenses=outstandingExpenses.Where(x=>x.DueDate!.Value.Date>=today && x.DueDate.Value.Date<=today.AddDays(7)).ToList();
@@ -69,6 +71,29 @@ public sealed class FinancialService(FinanceDbContext db,RecurringService recurr
             outgoingByDay.TryGetValue(date,out var outgoing);
             cumulative+=incoming-outgoing;
             cashflow.Add(new CashflowDayVm(day,incoming,outgoing,cumulative));
+        }
+        // Forecast the next 12 calendar months using the actual expected receipt
+        // and due dates. The current month starts today; overdue commitments are
+        // already covered in Attention and must not masquerade as future cash.
+        var monthlyForecast=new List<MonthlyForecastVm>();
+        for(var index=0;index<12;index++) {
+            var periodStart=monthStart.AddMonths(index);
+            var periodEnd=periodStart.AddMonths(1);
+            var effectiveStart=index==0?today:periodStart;
+            var incomingRows=outstandingRevenues
+                .Where(x=>x.ExpectedReceiptDate!.Value.Date>=effectiveStart && x.ExpectedReceiptDate.Value.Date<periodEnd)
+                .ToList();
+            var outgoingRows=outstandingExpenses
+                .Where(x=>x.DueDate!.Value.Date>=effectiveStart && x.DueDate.Value.Date<periodEnd)
+                .ToList();
+            var detail=incomingRows.Select(x=>new ForecastEntryVm(x.Id,true,x.RevenueItemName,
+                    x.ExpectedReceiptDate!.Value.Date,x.Amount))
+                .Concat(outgoingRows.Select(x=>new ForecastEntryVm(x.Id,false,x.Description,
+                    x.DueDate!.Value.Date,x.Amount)))
+                .OrderBy(x=>x.ExpectedDate).ThenBy(x=>x.Id).ToList();
+            monthlyForecast.Add(new MonthlyForecastVm(index,periodStart.Year,periodStart.Month,
+                periodStart.ToString("MMM/yy",Pt),incomingRows.Sum(x=>x.Amount),
+                outgoingRows.Sum(x=>x.Amount),detail));
         }
         var history=new List<MonthlyPoint>();
         for(var d=chartStart;d<end;d=d.AddMonths(1)) {
@@ -111,7 +136,7 @@ public sealed class FinancialService(FinanceDbContext db,RecurringService recurr
             DueExpenses30Days=cashflow.Take(31).Sum(x=>x.Outgoing),
             OverdueReceipts=lateReceipts.Sum(x=>x.Amount),
             OverdueReceiptsCount=lateReceipts.Count,
-            Alerts=alerts,CashflowDays=cashflow,Activity=activity,
+            Alerts=alerts,CashflowDays=cashflow,MonthlyForecast=monthlyForecast,Activity=activity,
             Target=target,DailyNeeded=dailyNeeded,ProjectedRevenue=projected,Insight=insight,History=history,
             Sources=periodRevenue.GroupBy(x=>x.RevenueItemName)
                 .Select(g=>new NamedAmount(g.Key,g.Sum(x=>x.Amount))).OrderByDescending(x=>x.Amount).Take(6).ToList(),

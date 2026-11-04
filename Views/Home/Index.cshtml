@@ -66,30 +66,51 @@
     <p>@Model.Insight</p>
   </section>
 
-  <section class="atlas-overview-section" aria-labelledby="atlasCashflowTitle">
+  <section class="atlas-overview-section atlas-month-forecast" aria-labelledby="atlasCashflowTitle" id="atlasMonthForecast">
     <div class="atlas-overview-section-heading">
-      <h2 id="atlasCashflowTitle" class="atlas-overview-section-title">Fluxo de caixa previsto</h2>
-      <div class="atlas-horizon" role="group" aria-label="Período da previsão">
-        <button type="button" data-horizon="7">7 dias</button>
-        <button type="button" data-horizon="15">15 dias</button>
-        <button type="button" data-horizon="30" aria-pressed="true">30 dias</button>
-        <button type="button" data-horizon="90">90 dias</button>
+      <h2 id="atlasCashflowTitle" class="atlas-overview-section-title">Projeção financeira mensal</h2>
+      <div class="atlas-horizon" role="group" aria-label="Período da projeção">
+        <button type="button" data-forecast-months="3" aria-pressed="false">3 meses</button>
+        <button type="button" data-forecast-months="6" aria-pressed="true">6 meses</button>
+        <button type="button" data-forecast-months="12" aria-pressed="false">12 meses</button>
       </div>
     </div>
     <div class="atlas-cashflow-grid">
-      <div><small>Entradas previstas</small><strong id="atlasCashIn">@Model.ExpectedReceipts30Days.ToString("C")</strong></div>
-      <div><small>Saídas previstas</small><strong id="atlasCashOut">@Model.DueExpenses30Days.ToString("C")</strong></div>
-      <div><small>Diferença prevista</small><strong id="atlasCashNet">@Model.ExpectedCashflow30Days.ToString("C")</strong></div>
+      <div><small>Entradas previstas</small><strong id="atlasCashIn">@Model.MonthlyForecast.Take(6).Sum(x=>x.Incoming).ToString("C")</strong></div>
+      <div><small>Saídas previstas</small><strong id="atlasCashOut">@Model.MonthlyForecast.Take(6).Sum(x=>x.Outgoing).ToString("C")</strong></div>
+      <div><small>Resultado previsto</small><strong id="atlasCashNet">@Model.MonthlyForecast.Take(6).Sum(x=>x.Result).ToString("C")</strong></div>
     </div>
-    <div class="atlas-cashflow-chart" id="atlasCashflowChart">
-      <svg id="atlasCashflowSvg" viewBox="0 0 960 240" role="img" aria-label="Variação acumulada entre entradas e saídas previstas em reais" preserveAspectRatio="xMidYMid meet"></svg>
-      <div class="atlas-cashflow-data" hidden>
-        @foreach(var point in Model.CashflowDays){
-          <span data-day="@point.Day" data-in="@point.Incoming.ToString(CultureInfo.InvariantCulture)" data-out="@point.Outgoing.ToString(CultureInfo.InvariantCulture)" data-net="@point.Net.ToString(CultureInfo.InvariantCulture)"></span>
-        }
-      </div>
+    <div class="atlas-month-forecast-legend"><span><i class="forecast-income-swatch"></i> Entradas</span><span><i class="forecast-expense-swatch"></i> Saídas</span></div>
+    <div class="atlas-month-forecast-chart" role="group" aria-label="Entradas e saídas mensais previstas">
+      @foreach(var point in Model.MonthlyForecast){
+        <button type="button" class="atlas-month-forecast-column" data-forecast-index="@point.Index" data-forecast-in="@point.Incoming.ToString(CultureInfo.InvariantCulture)" data-forecast-out="@point.Outgoing.ToString(CultureInfo.InvariantCulture)" aria-expanded="false" aria-controls="forecastDetails-@point.Index" hidden="@(point.Index>=6)">
+          <span class="atlas-month-forecast-bars" aria-hidden="true"><span class="atlas-month-forecast-bar forecast-income-bar"></span><span class="atlas-month-forecast-bar forecast-expense-bar"></span></span>
+          <span class="atlas-month-forecast-month">@point.Label</span>
+          <span class="atlas-month-forecast-result">@point.Result.ToString("C")</span>
+        </button>
+      }
     </div>
-    <p class="atlas-overview-footnote">Projeção acumulada dos lançamentos pendentes com data informada, a partir de hoje. Não representa saldo bancário e não inclui atrasados ou valores sem data no gráfico.</p>
+    <div class="atlas-month-forecast-details" id="atlasForecastDetails" aria-live="polite">
+      <p class="atlas-overview-footnote">Selecione um mês do gráfico para consultar os lançamentos previstos.</p>
+      @foreach(var point in Model.MonthlyForecast){
+        <div class="atlas-month-forecast-detail" id="forecastDetails-@point.Index" data-forecast-detail="@point.Index" hidden>
+          <div class="atlas-month-forecast-detail-title"><strong>@point.Label — Resultado: @point.Result.ToString("C")</strong><span>@point.Entries.Count lançamento(s)</span></div>
+          @if(point.Entries.Count==0){
+            <p class="atlas-overview-footnote">Nenhum recebimento ou vencimento previsto para este mês.</p>
+          } else {
+            <div class="atlas-month-forecast-entries">
+              @foreach(var entry in point.Entries){
+                <a asp-controller="@(entry.IsRevenue?"Revenue":"Expenses")" asp-action="Edit" asp-route-id="@entry.Id">
+                  <span><strong>@entry.Name</strong><small>@entry.ExpectedDate.ToString("dd/MM/yyyy") · @(entry.IsRevenue?"A receber":"A pagar")</small></span>
+                  <b class="@(entry.IsRevenue?"amount-positive":"amount-negative")">@(entry.IsRevenue?"+":"−")@entry.Amount.ToString("C")</b>
+                </a>
+              }
+            </div>
+          }
+        </div>
+      }
+    </div>
+    <p class="atlas-overview-footnote">Projeção por data prevista de recebimento e vencimento, incluindo recorrências. O mês atual considera somente hoje em diante; pendências atrasadas aparecem em Atenção financeira. Não representa saldo bancário nem inclui lançamentos sem data informada.</p>
   </section>
 
   <details class="atlas-overview-details" open>

@@ -319,3 +319,36 @@ a.atlas-overview-metric:focus-visible,.atlas-attention-item:focus-visible,.atlas
 @media(max-width:1100px){.atlas-overview-metrics,.atlas-attention-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.atlas-overview-analysis-grid{grid-template-columns:minmax(0,1fr)}}
 @media(max-width:680px){.atlas-overview{gap:18px}.atlas-overview-head{align-items:flex-start}.atlas-overview-metric,.atlas-attention-item{padding:14px}.atlas-overview-metric strong{font-size:20px}.atlas-overview-section-title{font-size:15px}.atlas-insight-simple{flex-direction:column;gap:8px;padding:15px}.atlas-cashflow-grid{grid-template-columns:1fr 1fr}.atlas-cashflow-grid>div:last-child{grid-column:1/-1}.atlas-overview-extra{grid-template-columns:repeat(2,minmax(0,1fr))}.atlas-overview-detail-body{padding:0 8px 10px}}
 @media(max-width:380px){.atlas-overview-metric,.atlas-attention-item{padding:11px}.atlas-overview-metric strong,.atlas-attention-item strong{font-size:16px}.atlas-horizon button{padding:7px 8px}.atlas-overview-extra strong{font-size:14px}}
+
+
+/* ATLAS monthly projected cashflow: dates determine forecast, not competence. */
+.atlas-month-forecast-legend{display:flex;justify-content:flex-end;gap:16px;font-size:10px;color:#69776e;margin:15px 2px 10px}
+.atlas-month-forecast-legend span{display:flex;align-items:center;gap:6px}
+.atlas-month-forecast-legend i{display:inline-block;width:9px;height:9px;border-radius:3px}
+.forecast-income-swatch,.atlas-month-forecast-bar.forecast-income-bar{background:#6350e8}
+.forecast-expense-swatch,.atlas-month-forecast-bar.forecast-expense-bar{background:#a9b7af}
+.atlas-month-forecast-chart{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:9px;align-items:stretch;border:1px solid #e1e5df;background:#fff;border-radius:13px;padding:18px 15px 13px;min-width:0}
+.atlas-month-forecast-column{grid-column:span 2;display:flex;flex-direction:column;align-items:center;gap:8px;padding:9px 4px 11px;border:1px solid transparent;border-radius:10px;background:transparent;color:#263129;min-width:0;cursor:pointer;font:inherit}
+.atlas-month-forecast-column:hover{background:#f6f5fd}
+.atlas-month-forecast-column.selected{border-color:#9789ec;background:#f6f3ff}
+.atlas-month-forecast-column:focus-visible{outline:3px solid #8e7af2;outline-offset:2px}
+.atlas-month-forecast-column[hidden]{display:none}
+.atlas-month-forecast-bars{width:100%;height:175px;display:flex;align-items:flex-end;justify-content:center;gap:7px;border-bottom:1px solid #dce2dc}
+.atlas-month-forecast-bar{display:block;width:clamp(9px,2.3vw,28px);min-height:0;border-radius:5px 5px 0 0;transition:height .2s ease}
+.atlas-month-forecast-month{font-size:11px;font-weight:700;text-transform:capitalize;white-space:nowrap}
+.atlas-month-forecast-result{font-size:11px;color:#597365;font-weight:750;white-space:nowrap}
+.atlas-month-forecast-details{margin-top:12px}
+.atlas-month-forecast-details>.atlas-overview-footnote{margin:0}
+.atlas-month-forecast-detail{border:1px solid #e1e5df;background:#fff;border-radius:12px;padding:12px 15px}
+.atlas-month-forecast-detail[hidden]{display:none}
+.atlas-month-forecast-detail-title{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font-size:12px;margin-bottom:9px;text-transform:capitalize}
+.atlas-month-forecast-detail-title span{color:#758278;font-size:10px}
+.atlas-month-forecast-entries{display:flex;flex-direction:column;max-height:280px;overflow:auto}
+.atlas-month-forecast-entries a{display:flex;align-items:center;justify-content:space-between;gap:12px;text-decoration:none;color:#29362c;padding:10px 3px;border-top:1px solid #ecf0ed;font-size:11px}
+.atlas-month-forecast-entries a:hover{text-decoration:underline}
+.atlas-month-forecast-entries a>span{display:flex;flex-direction:column;gap:4px;min-width:0}
+.atlas-month-forecast-entries a small{color:#7d887e;font-size:10px}
+.atlas-month-forecast-entries a b{white-space:nowrap}
+@media(max-width:1050px){.atlas-month-forecast-chart{overflow-x:auto;grid-template-columns:repeat(12,minmax(52px,1fr))}.atlas-month-forecast-column{grid-column:span 2}}
+@media(max-width:650px){.atlas-month-forecast-chart{gap:4px;padding:12px 7px;grid-template-columns:repeat(12,minmax(38px,1fr))}.atlas-month-forecast-bars{height:130px;gap:4px}.atlas-month-forecast-month,.atlas-month-forecast-result{font-size:9px}.atlas-month-forecast-legend{margin-top:12px}}
+@media(prefers-reduced-motion:reduce){.atlas-month-forecast-bar{transition:none}}

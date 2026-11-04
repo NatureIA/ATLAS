@@ -53,10 +53,11 @@ public class ExpensesController(FinanceDbContext db,CurrentUser current,AuditSer
                 "Crédito"=>effectiveToday.AddMonths(1),"Boleto"=>InitialBillDate(),_=>effectiveToday};
             var series=new RecurringExpenseSeries{UserId=current.Id,Description=input.Description.Trim(),Category=category,
                 ExpenseType=input.ExpenseType,Amount=input.Amount,PaymentMethod=input.PaymentMethod,
-                StartDate=start,Notes=input.Notes,DueDay=input.DueDate?.Day};
+                StartDate=start,Notes=input.Notes,DueDay=input.DueDate?.Day,
+                DueMonthOffset=input.DueDate.HasValue ? (input.DueDate.Value.Year-start.Year)*12+input.DueDate.Value.Month-start.Month : 0};
             db.ExpenseSeries.Add(series);
             recurrence.Revision(current.Id,series.Id,"expense",start,new ExpenseSnapshot(series.Description,
-                series.Category,series.ExpenseType,series.Amount,series.PaymentMethod,series.Notes,series.DueDay));
+                series.Category,series.ExpenseType,series.Amount,series.PaymentMethod,series.Notes,series.DueDay,series.DueMonthOffset));
             db.Expenses.Add(New(input,category,start,false,series.Id,RecurringService.Key(start)));
             // Em pagamento comum respeita a indicação Já paga na ocorrência inicial.
             if(input.PaymentMethod is not ("Crédito" or "Boleto"))db.Expenses.Local.Last().Paid=input.Paid;
@@ -109,6 +110,7 @@ public class ExpensesController(FinanceDbContext db,CurrentUser current,AuditSer
                 foreach(var entry in future)Apply(entry,input,cat,false);
                 row.Paid=input.Paid;
                 series.DueDay=input.DueDate?.Day;
+                series.DueMonthOffset=input.DueDate.HasValue ? (input.DueDate.Value.Year-row.Date.Year)*12+input.DueDate.Value.Month-row.Date.Month : 0;
                 series.Description=input.Description.Trim();series.Category=cat;series.ExpenseType=input.ExpenseType;
                 series.Amount=input.Amount;series.PaymentMethod=input.PaymentMethod;series.Notes=input.Notes;series.UpdatedAt=DateTime.UtcNow;
                 // Later revisions must not restore an older amount when subsequent months are generated.
@@ -116,7 +118,7 @@ public class ExpensesController(FinanceDbContext db,CurrentUser current,AuditSer
                 var later=await db.Revisions.Where(x=>x.UserId==current.Id&&x.SeriesId==seriesId&&x.Kind=="expense"&&x.EffectiveMonth>from).ToListAsync();
                 foreach(var revision in later)
                     recurrence.Revision(current.Id,seriesId,"expense",revision.EffectiveMonth,
-                        new ExpenseSnapshot(input.Description.Trim(),cat,input.ExpenseType,input.Amount,input.PaymentMethod,input.Notes,series.DueDay));
+                        new ExpenseSnapshot(input.Description.Trim(),cat,input.ExpenseType,input.Amount,input.PaymentMethod,input.Notes,series.DueDay,series.DueMonthOffset));
                 recurrence.Revision(current.Id,seriesId,"expense",row.Date,new ExpenseSnapshot(series.Description,
                     cat,input.ExpenseType,input.Amount,input.PaymentMethod,input.Notes,series.DueDay));
                 audit.Add("UPDATE","RecurringExpenseSeries",seriesId,new{effective=row.Date,scope,input.Amount,cat,updatedFutureRevisions=later.Count});

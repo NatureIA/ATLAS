@@ -28,6 +28,7 @@ public sealed class FinanceDbContext(DbContextOptions<FinanceDbContext> options)
         push.Property(x=>x.P256dh).HasMaxLength(512);
         push.Property(x=>x.Auth).HasMaxLength(256);
         push.Property(x=>x.LastNotifiedDay).HasColumnType("date");
+        push.Property(x=>x.LastNotifiedSlot).HasColumnType("int");
         push.HasIndex(x=>new{x.UserId,x.Active});
         var r=b.Entity<RevenueEntry>(); r.ToTable("AtlasFinRevenueEntries"); r.HasKey(x=>x.Id);
         r.Property(x=>x.RevenueItemName).HasMaxLength(160); r.Property(x=>x.PaymentMethod).HasMaxLength(40);

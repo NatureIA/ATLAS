@@ -1,8 +1,6 @@
 # ATLAS — Notificações Web Push
 
-O ATLAS apresenta um convite automático após o login, por dispositivo, sem exigir procura por um botão na barra lateral. O usuário toca em **Ativar notificações** para solicitar a permissão nativa ao navegador. Não é possível abrir a permissão nativa de forma confiável sem um gesto do usuário. O ATLAS envia um lembrete consolidado por dispositivo e
-por dia quando existe pelo menos uma despesa com **Paid = false** e
-**Date <= data atual**. O campo Date é a competência, não o vencimento:
+O ATLAS apresenta um convite automático após o login, por dispositivo, sem exigir procura por um botão na barra lateral. O usuário toca em **Ativar notificações** para solicitar a permissão nativa ao navegador. Não é possível abrir a permissão nativa de forma confiável sem um gesto do usuário. O ATLAS envia, no máximo, quatro lembretes por dispositivo e por dia, nas janelas das **08h, 12h, 15h e 18h (Brasília)**, quando existir despesa com **Paid = false** e competência igual ou anterior ao mês atual. O campo Date é a competência, não o vencimento:
 não informar no texto que uma conta "vence hoje" ou "está atrasada".
 
 ## Configuração privada obrigatória
@@ -21,15 +19,17 @@ No GitHub, em **Settings → Secrets and variables → Actions → New repositor
 crie somente o secret `ATLAS_PUSH_JOB_KEY` com o mesmo valor do MonsterASP.
 
 O arquivo `.github/workflows/push-reminders.yml` aciona
-`POST /api/push/dispatch` a cada **10 minutos** (minutos 03, 13, 23, 33, 43 e 53 UTC). Isso gera tráfego regular que reduz a chance de hibernação no MonsterASP Free. Os lembretes seguem limitados a um envio por dia/dispositivo. O GitHub Actions pode atrasar ou até cancelar execuções agendadas; não equivale a monitoramento garantido 24×7.
+`POST /api/push/dispatch` somente às **08h, 12h, 15h e 18h** no horário de Brasília (**11h, 15h, 18h e 21h UTC**). São quatro verificações por dia, cada uma podendo gerar no máximo um aviso por dispositivo quando há despesas sem baixa. O MonsterASP Free poderá hibernar entre as verificações; a requisição agendada tenta despertá-lo. O GitHub Actions e a inicialização da hospedagem podem causar atrasos, e atrasos para fora da hora programada podem resultar em uma notificação não enviada. O GitHub Actions pode atrasar ou até cancelar execuções agendadas; não equivale a monitoramento garantido 24×7.
 Também permite execução manual em **Actions**.
 
 ## Funcionamento
 
+O ATLAS não usa a data registrada como vencimento: uma despesa com competência em qualquer dia do mês entra nos alertas desde o dia 1º daquele mês. Despesas pendentes de meses anteriores também entram, enquanto despesas de meses futuros ficam de fora. O envio é por horário de Brasília e pode ocorrer alguns minutos depois do horário nominal devido ao agendador e ao despertar da hospedagem.
+
 1. Após entrar no ATLAS, o convite aparece automaticamente; clicar **Ativar notificações** no convite.
 2. Autorizar a notificação no dispositivo.
 3. O navegador envia a assinatura ao backend e ela fica vinculada ao usuário.
-4. O job diário lê somente despesas sem baixa do próprio usuário e envia um
+4. O agendamento, somente nos quatro horários, lê as despesas sem baixa do próprio usuário e envia um
    aviso genérico com a quantidade. Ele não expõe valores na tela bloqueada.
 5. Ao clicar na notificação, o usuário vai à página de despesas pendentes.
 6. Para desativar notificações, revogar a permissão nas configurações do navegador/dispositivo. O cadastro poderá ser reativado quando o navegador permitir.

@@ -14,6 +14,7 @@ public sealed class PushDeviceSubscription {
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? LastNotifiedUtc { get; set; }
     public DateTime? LastNotifiedDay { get; set; }
+    public int? LastNotifiedSlot { get; set; }
 }
 
 public sealed class PushSubscriptionInput {

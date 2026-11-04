@@ -38,14 +38,25 @@ public sealed class PushReminderService(
             || host.EndsWith(".notify.windows.com", StringComparison.Ordinal);
     }
 
+    private static readonly TimeZoneInfo BrasiliaTimeZone =
+        TimeZoneInfo.FindSystemTimeZoneById("America/Sao_Paulo");
+
     public async Task<int> SendDailyAsync(CancellationToken ct)
     {
         if (!IsConfigured) throw new InvalidOperationException("Push não configurado.");
-        // Daily cutoff: UTC day, run at 12:00 UTC (09:00 in Brasilia).
-        // The Date field is accounting competence, not an actual due date.
-        var today=DateTime.UtcNow.Date;
+
+        // GitHub Actions continues checking every ten minutes, including waking the hosting.
+        // Deliver ONLY in one of the four designated Brasília hours (no late catch-up).
+        var localNow=TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow,BrasiliaTimeZone);
+        var slot=localNow.Hour switch { 8=>8, 12=>12, 15=>15, 18=>18, _=>0 };
+        if(slot==0)return 0;
+        var today=localNow.Date;
+        // Competence is a month, not a bill due date. Include ALL of this month
+        // plus historical pending expenses, regardless of the day stored in Date.
+        var firstDayNextMonth=new DateTime(today.Year,today.Month,1).AddMonths(1);
         var devices=await db.PushDevices.AsNoTracking()
-            .Where(x=>x.Active && (x.LastNotifiedDay==null || x.LastNotifiedDay<today))
+            .Where(x=>x.Active && (x.LastNotifiedDay==null || x.LastNotifiedDay<today ||
+                (x.LastNotifiedDay==today && (x.LastNotifiedSlot==null || x.LastNotifiedSlot!=slot))))
             .OrderBy(x=>x.Id).Take(1000).ToListAsync(ct);
         var users=devices.Select(x=>x.UserId).Distinct().ToList();
         var sent=0;
@@ -60,13 +71,13 @@ public sealed class PushReminderService(
             var user=await db.Users.AsNoTracking().FirstOrDefaultAsync(x=>x.Id==userId && x.Ativo,ct);
             if(user==null) continue;
             try {
-                await recurring.EnsureThroughAsync(userId,today,ct);
+                await recurring.EnsureThroughAsync(userId,firstDayNextMonth.AddDays(-1),ct);
             } catch(Exception e) {
                 logger.LogError(e,"ATLAS push: falha na atualização de recorrência para usuário {UserId}",userId);
                 continue;
             }
             var count=await db.Expenses.AsNoTracking()
-                .CountAsync(x=>x.UserId==userId && !x.Paid && x.Date<=today,ct);
+                .CountAsync(x=>x.UserId==userId && !x.Paid && x.Date<firstDayNextMonth,ct);
             if(count==0) continue;
             var payload=JsonSerializer.Serialize(new {
                 title="ATLAS — Despesas sem baixa",
@@ -77,11 +88,14 @@ public sealed class PushReminderService(
             foreach(var device in devices.Where(x=>x.UserId==userId))
             {
                 ct.ThrowIfCancellationRequested();
-                // Atomic daily claim avoids duplicate messages across overlapping scheduled runs.
+                // Atomic per-slot claim avoids duplicate messages if the ten-minute
+                // worker runs repeatedly or overlapping executions occur.
                 var claimed=await db.PushDevices.Where(x=>x.Id==device.Id && x.Active &&
-                    (x.LastNotifiedDay==null || x.LastNotifiedDay<today))
+                    (x.LastNotifiedDay==null || x.LastNotifiedDay<today ||
+                     (x.LastNotifiedDay==today && (x.LastNotifiedSlot==null || x.LastNotifiedSlot!=slot))))
                     .ExecuteUpdateAsync(set=>set
                         .SetProperty(x=>x.LastNotifiedDay,(DateTime?)today)
+                        .SetProperty(x=>x.LastNotifiedSlot,(int?)slot)
                         .SetProperty(x=>x.LastNotifiedUtc,(DateTime?)null),ct);
                 if(claimed==0)continue;
                 try {
@@ -97,11 +111,11 @@ public sealed class PushReminderService(
                         await db.PushDevices.Where(x=>x.Id==device.Id)
                             .ExecuteUpdateAsync(set=>set.SetProperty(x=>x.Active,false),ct);
                     } else {
-                        await ReleaseClaim(device.Id,today,ct);
+                        await ReleaseClaim(device.Id,today,slot,ct);
                     }
                     logger.LogWarning("ATLAS push delivery failed (status {Status}) for device {Id}",(int)e.StatusCode,device.Id);
                 } catch(Exception e) {
-                    await ReleaseClaim(device.Id,today,ct);
+                    await ReleaseClaim(device.Id,today,slot,ct);
                     logger.LogError(e,"ATLAS push delivery failed for device {Id}",device.Id);
                 }
             }
@@ -109,7 +123,10 @@ public sealed class PushReminderService(
         return sent;
     }
 
-    private Task<int> ReleaseClaim(long id,DateTime today,CancellationToken ct) =>
-        db.PushDevices.Where(x=>x.Id==id && x.LastNotifiedDay==today && x.LastNotifiedUtc==null)
-            .ExecuteUpdateAsync(set=>set.SetProperty(x=>x.LastNotifiedDay,(DateTime?)null),ct);
+    private Task<int> ReleaseClaim(long id,DateTime today,int slot,CancellationToken ct) =>
+        db.PushDevices.Where(x=>x.Id==id && x.LastNotifiedDay==today &&
+            x.LastNotifiedSlot==slot && x.LastNotifiedUtc==null)
+            .ExecuteUpdateAsync(set=>set
+                .SetProperty(x=>x.LastNotifiedDay,(DateTime?)null)
+                .SetProperty(x=>x.LastNotifiedSlot,(int?)null),ct);
 }

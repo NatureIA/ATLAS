@@ -83,7 +83,7 @@
     <div class="atlas-month-forecast-legend"><span><i class="forecast-income-swatch"></i> Entradas</span><span><i class="forecast-expense-swatch"></i> Saídas</span></div>
     <div class="atlas-month-forecast-chart" role="group" aria-label="Entradas e saídas mensais previstas">
       @foreach(var point in Model.MonthlyForecast){
-        <button type="button" class="atlas-month-forecast-column" data-forecast-index="@point.Index" data-forecast-in="@point.Incoming.ToString(CultureInfo.InvariantCulture)" data-forecast-out="@point.Outgoing.ToString(CultureInfo.InvariantCulture)" aria-expanded="false" aria-controls="forecastDetails-@point.Index" @(point.Index>=6?"hidden":null)>
+        <button type="button" class="atlas-month-forecast-column" data-forecast-index="@point.Index" data-forecast-in="@point.Incoming.ToString(CultureInfo.InvariantCulture)" data-forecast-out="@point.Outgoing.ToString(CultureInfo.InvariantCulture)" aria-expanded="false" aria-controls="forecastDetails-@point.Index" hidden="@(point.Index>=6)">
           <span class="atlas-month-forecast-bars" aria-hidden="true"><span class="atlas-month-forecast-bar forecast-income-bar"></span><span class="atlas-month-forecast-bar forecast-expense-bar"></span></span>
           <span class="atlas-month-forecast-month">@point.Label</span>
           <span class="atlas-month-forecast-result">@point.Result.ToString("C")</span>

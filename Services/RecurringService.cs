@@ -6,12 +6,17 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Atlas.Services;
 public record RevenueSnapshot(string RevenueItemName,decimal Amount,string PaymentMethod,string? ReferenceName,string? Notes);
-public record ExpenseSnapshot(string Description,string Category,string ExpenseType,decimal Amount,string PaymentMethod,string? Notes,int? DueDay = null);
+public record ExpenseSnapshot(string Description,string Category,string ExpenseType,decimal Amount,string PaymentMethod,string? Notes,int? DueDay = null,int DueMonthOffset = 0);
 public sealed class RecurringService(FinanceDbContext db,AuditService audit) {
     public static DateTime Month(DateTime date) => new(date.Year,date.Month,1);
     public static string Key(DateTime date) => date.ToString("yyyy-MM",System.Globalization.CultureInfo.InvariantCulture);
     public static DateTime OccurrenceDate(DateTime anchor,DateTime month) =>
         new(month.Year,month.Month,Math.Min(anchor.Day,DateTime.DaysInMonth(month.Year,month.Month)));
+
+    public static DateTime RecurringDueDate(DateTime competenceMonth,int dueDay,int monthOffset) {
+        var month=Month(competenceMonth).AddMonths(monthOffset);
+        return new DateTime(month.Year,month.Month,Math.Min(dueDay,DateTime.DaysInMonth(month.Year,month.Month)));
+    }
 
     public void Revision(int userId,Guid id,string kind,DateTime effective,object snapshot) {
         var month=Month(effective);
@@ -70,7 +75,7 @@ public sealed class RecurringService(FinanceDbContext db,AuditService audit) {
                     JsonSerializer.Deserialize<ExpenseSnapshot>(rule.SnapshotJson)!;
                 db.Expenses.Add(new ExpenseEntry {UserId=userId,Description=data.Description,Category=data.Category,
                     ExpenseType=data.ExpenseType,Amount=data.Amount,PaymentMethod=data.PaymentMethod,
-                    Notes=data.Notes,Date=day,DueDate=data.DueDay is int dueDay && dueDay>=1 && dueDay<=31 ? new DateTime(m.Year,m.Month,Math.Min(dueDay,DateTime.DaysInMonth(m.Year,m.Month))) : null,Paid=false,RecurringSeriesId=s.Id,RecurringOccurrenceKey=key});
+                    Notes=data.Notes,Date=day,DueDate=data.DueDay is int dueDay && dueDay>=1 && dueDay<=31 ? RecurringDueDate(m,dueDay,data.DueMonthOffset) : null,Paid=false,RecurringSeriesId=s.Id,RecurringOccurrenceKey=key});
             }
         }
         await db.SaveChangesAsync(ct);

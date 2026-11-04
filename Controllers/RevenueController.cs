@@ -132,7 +132,7 @@ public class RevenueController(FinanceDbContext db,CurrentUser current,AuditServ
                     recurrence.Revision(current.Id,seriesId,"revenue",revision.EffectiveMonth,
                         new RevenueSnapshot(name,input.Amount,input.PaymentMethod,input.ReferenceName,input.Notes,serie.ReceiptDay,serie.ReceiptMonthOffset,serie.FutureReceived));
                 recurrence.Revision(current.Id,seriesId,"revenue",row.Date,
-                    new RevenueSnapshot(name,input.Amount,input.PaymentMethod,input.ReferenceName,input.Notes));
+                    new RevenueSnapshot(name,input.Amount,input.PaymentMethod,input.ReferenceName,input.Notes,serie.ReceiptDay,serie.ReceiptMonthOffset,serie.FutureReceived));
                 audit.Add("UPDATE","RecurringRevenueSeries",seriesId,new {effective=row.Date,scope,input.Amount,name,updatedFutureRevisions=later.Count});
             }
         } else {Apply(row,name,input);audit.Add("UPDATE","RevenueEntry",row.Id,new {input.Amount,name});}

@@ -99,6 +99,7 @@
       }
     }
     function render(){
+      monthlyForecast.querySelector('.atlas-month-forecast-chart')?.style.setProperty('--forecast-visible',String(months));
       buttons.forEach(button=>button.setAttribute('aria-pressed',String(Number(button.dataset.forecastMonths)===months)));
       const active=rows.filter(row=>row.index<months);
       const maximum=Math.max(1,...active.flatMap(row=>[row.incoming,row.outgoing]));

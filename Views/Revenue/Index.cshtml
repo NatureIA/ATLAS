@@ -1,10 +1,11 @@
 @model RevenueListVm
-@{ ViewData["Title"]="Faturamento"; var competenceLabel=new DateTime(Model.Year!.Value,Model.Month!.Value,1).ToString("MMMM yyyy",CultureInfo.GetCultureInfo("pt-BR")); var filtersActive=!string.IsNullOrWhiteSpace(Model.Search)||!string.IsNullOrWhiteSpace(Model.PaymentMethod)||!string.IsNullOrWhiteSpace(Model.Status)||!string.IsNullOrWhiteSpace(Model.Group); }
+@{ ViewData["Title"]="Faturamento"; var competenceLabel=Model.Month==0?$"Ano de {Model.Year}":new DateTime(Model.Year!.Value,Model.Month!.Value,1).ToString("MMMM yyyy",CultureInfo.GetCultureInfo("pt-BR")); var filtersActive=!string.IsNullOrWhiteSpace(Model.Search)||!string.IsNullOrWhiteSpace(Model.PaymentMethod)||!string.IsNullOrWhiteSpace(Model.Status)||!string.IsNullOrWhiteSpace(Model.Group); }
 <section class="expense-due-section" aria-label="Central de recebimentos">
   <div class="expense-due-heading">
     <div class="expense-due-title"><h3>Recebimentos</h3><span class="expense-due-period">@competenceLabel</span></div>
     <div class="expense-due-actions"><a class="expense-due-reset" asp-action="Index" asp-route-year="@Model.Year" asp-route-month="@Model.Month">Ver todas da competência</a><a class="btn dark" asp-action="Create">+ Nova receita</a></div>
   </div>
+  <div class="revenue-period-shortcuts"><a class="btn ghost" asp-action="Index" asp-route-year="@Model.Year" asp-route-month="0" aria-current="@(Model.Month==0?"page":null)">Visualizar ano inteiro</a><a class="btn ghost" asp-action="Index" asp-route-year="@Model.Year" asp-route-month="@Model.Today.Month" aria-current="@(Model.Month==Model.Today.Month && Model.Year==Model.Today.Year?"page":null)">Mês atual</a></div>
   <div class="expense-due-grid revenue-due-grid">
   @foreach(var bucket in Model.Buckets){
     var active=Model.Group==bucket.Key;
@@ -28,7 +29,7 @@
 @foreach(var method in new[]{"Pix","Dinheiro","Débito","Crédito","Transferência"}){<option value="@method" selected="@(Model.PaymentMethod==method)">@method</option>}
 </select></div>
 <div class="field"><label>Ano da competência</label><input name="year" type="number" min="2000" max="2100" value="@Model.Year" required /></div>
-<div class="field"><label>Mês da competência</label><select name="month" required>@for(var i=1;i<=12;i++){<option value="@i" selected="@(Model.Month==i)">@CultureInfo.GetCultureInfo("pt-BR").DateTimeFormat.GetMonthName(i)</option>}</select></div>
+<div class="field"><label>Período</label><select name="month" required><option value="0" selected="@(Model.Month==0)">Ano inteiro</option>@for(var i=1;i<=12;i++){<option value="@i" selected="@(Model.Month==i)">@CultureInfo.GetCultureInfo("pt-BR").DateTimeFormat.GetMonthName(i)</option>}</select></div>
 </div><div class="filter-actions"><button class="btn dark" type="submit">Filtrar</button><a class="btn ghost" asp-action="Index">Mês atual / Limpar</a></div></form>
 </details>
 <section class="card table-card"><div class="card-title"><div><h3>Receitas registradas — @competenceLabel</h3></div><span class="card-meta">Até 500 registros</span></div>

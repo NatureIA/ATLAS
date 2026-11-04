@@ -71,7 +71,7 @@ public sealed class PushReminderService(
             var user=await db.Users.AsNoTracking().FirstOrDefaultAsync(x=>x.Id==userId && x.Ativo,ct);
             if(user==null) continue;
             try {
-                await recurring.EnsureThroughAsync(userId,firstDayNextMonth.AddDays(-1),ct);
+                await recurring.EnsureThroughAsync(userId,today.AddDays(7),ct);
             } catch(Exception e) {
                 logger.LogError(e,"ATLAS push: falha na atualização de recorrência para usuário {UserId}",userId);
                 continue;
@@ -103,11 +103,25 @@ public sealed class PushReminderService(
                 if(withinSeven>0)parts.Add($"{withinSeven} vence(m) em 4–7 dias");
                 if(undated>0)parts.Add($"{undated} sem vencimento informado");
             }
+            // Receipts share the same dispatch and per-device timeslot claim with expenses.
+            // Only forecast dates matter; confirmed receipt is never counted.
+            var revenuePending=await db.Revenues.AsNoTracking()
+                .Where(x=>x.UserId==userId && !x.Received && x.ExpectedReceiptDate!=null)
+                .Select(x=>x.ExpectedReceiptDate)
+                .ToListAsync(ct);
+            var revenueLate=revenuePending.Count(x=>x!.Value.Date<today);
+            var revenueToday=revenuePending.Count(x=>x!.Value.Date==today);
+            var revenueTomorrow=revenuePending.Count(x=>x!.Value.Date==today.AddDays(1));
+            var revenueWeek=revenuePending.Count(x=>x!.Value.Date>today.AddDays(1) && x!.Value.Date<=today.AddDays(7));
+            if(revenueLate>0 && slot is 8 or 15)parts.Add($"{revenueLate} recebimento(s) atrasado(s)");
+            if(revenueToday>0 && slot is 8 or 12 or 18)parts.Add($"{revenueToday} recebimento(s) previsto(s) hoje");
+            if(revenueTomorrow>0 && slot is 8 or 18)parts.Add($"{revenueTomorrow} previsto(s) amanhã");
+            if(revenueWeek>0 && slot==8)parts.Add($"{revenueWeek} recebimento(s) nos próximos 7 dias");
             if(parts.Count==0)continue;
             var payload=JsonSerializer.Serialize(new {
-                title=overdue>0 || dueToday>0?"ATLAS — Pagamentos precisam de atenção":"ATLAS — Próximos compromissos",
+                title=overdue>0 || dueToday>0 || revenueLate>0?"ATLAS — Seu financeiro precisa de atenção":"ATLAS — Próximos compromissos",
                 body=string.Join("; ",parts)+". Consulte suas despesas.",
-                url="/Expenses?status=pending",
+                url="/Home",
                 tag="atlas-pending-expenses"
             });
             foreach(var device in devices.Where(x=>x.UserId==userId))

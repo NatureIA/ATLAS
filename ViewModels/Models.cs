@@ -18,6 +18,9 @@ public class RevenueInput {
     [Range(typeof(decimal),"0.01","999999999999.99")] public decimal Amount {get;set;}
     [Required] public string PaymentMethod {get;set;}="Pix";
     [MaxLength(160)] public string? ReferenceName {get;set;}
+    public bool Received {get;set;}=true;
+    [DataType(DataType.Date)] public DateTime? ExpectedReceiptDate {get;set;}
+    [DataType(DataType.Date)] public DateTime? ReceivedDate {get;set;}
     [MaxLength(1000)] public string? Notes {get;set;}
     public bool IsRecurring {get;set;}
     public List<RevenueItem> Items {get;set;}=[];
@@ -70,7 +73,12 @@ public class GoalInput {
     [Range(typeof(decimal),"0.01","999999999999.99")] public decimal TargetAmount {get;set;}
     [DataType(DataType.Date)] public DateTime? Deadline {get;set;}
 }
+public record ReceiptBucketVm(string Key,string Label,int Count,decimal Amount);
 public class RevenueListVm {
+    public DateTime Today {get;set;}
+    public string? Status {get;set;}
+    public string? Group {get;set;}
+    public List<ReceiptBucketVm> Buckets {get;set;}=[];
     public List<RevenueEntry> Rows {get;set;}=[];
     public string? Search {get;set;}
     public string? PaymentMethod {get;set;}
@@ -104,6 +112,13 @@ public class DashboardVm {
     public int SalesCount {get;set;}
     public decimal Ticket => SalesCount==0?0:Revenue/SalesCount;
     public decimal ProjectedRevenue {get;set;}
+    public decimal ReceivedRevenue {get;set;}
+    public decimal PendingRevenue {get;set;}
+    public decimal ExpectedReceipts30Days {get;set;}
+    public decimal DueExpenses30Days {get;set;}
+    public decimal ExpectedCashflow30Days => ExpectedReceipts30Days-DueExpenses30Days;
+    public decimal OverdueReceipts {get;set;}
+    public int OverdueReceiptsCount {get;set;}
     public decimal Target {get;set;}
     public decimal Remaining => Math.Max(0,Target-Revenue);
     public decimal DailyNeeded {get;set;}
@@ -119,6 +134,8 @@ public class ReportVm {
     // Total annual commitments, including both paid and pending entries.
     public decimal Expenses {get;set;}
     public decimal PaidExpenses {get;set;}
+    public decimal ReceivedRevenue {get;set;}
+    public decimal PendingRevenue {get;set;}
     public decimal PendingExpenses {get;set;}
     public decimal Profit => Revenue-Expenses;
     public decimal Margin => Revenue<=0?0:Math.Round(Profit/Revenue*100,1);

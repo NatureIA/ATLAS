@@ -24,6 +24,22 @@ public sealed class FinancialService(FinanceDbContext db,RecurringService recurr
         var basis=includeScheduled?monthExpenses:monthExpenses.Where(x=>x.Paid).ToList();
         var revenue=monthRevenue.Sum(x=>x.Amount);
         var expenses=basis.Sum(x=>x.Amount);
+        // Cashflow outlook uses actual expected dates, never accounting competence;
+        // omit undated obligations, and do not imply a bank-account balance.
+        var brasiliaToday=TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow,
+            TimeZoneInfo.FindSystemTimeZoneById("America/Sao_Paulo")).Date;
+        var forecastEnd=brasiliaToday.AddDays(30);
+        await recurrence.EnsureThroughAsync(userId,forecastEnd);
+        var futureReceipts=await db.Revenues.AsNoTracking()
+            .Where(x=>x.UserId==userId && !x.Received && x.ExpectedReceiptDate>=brasiliaToday && x.ExpectedReceiptDate<=forecastEnd)
+            .SumAsync(x=>x.Amount);
+        var futurePayments=await db.Expenses.AsNoTracking()
+            .Where(x=>x.UserId==userId && !x.Paid && x.DueDate>=brasiliaToday && x.DueDate<=forecastEnd)
+            .SumAsync(x=>x.Amount);
+        var overdueReceipts=await db.Revenues.AsNoTracking()
+            .Where(x=>x.UserId==userId && !x.Received && x.ExpectedReceiptDate<brasiliaToday)
+            .GroupBy(x=>1).Select(g=>new {Count=g.Count(),Amount=g.Sum(x=>x.Amount)})
+            .FirstOrDefaultAsync();
         var targetGoal=await db.Goals.AsNoTracking().Where(x=>x.UserId==userId && (x.Deadline==null || (x.Deadline>=start&&x.Deadline<end)))
             .OrderByDescending(x=>x.Id).FirstOrDefaultAsync();
         var target=targetGoal?.TargetAmount??0m;
@@ -46,6 +62,10 @@ public sealed class FinancialService(FinanceDbContext db,RecurringService recurr
             history.Add(new MonthlyPoint(d.Year,d.Month,Pt.DateTimeFormat.GetAbbreviatedMonthName(d.Month).TrimEnd('.'),rr,ee,rr-ee));
         }
         return new DashboardVm {Year=year,Month=month,Revenue=revenue,Expenses=expenses,SalesCount=monthRevenue.Count,
+            ReceivedRevenue=monthRevenue.Where(x=>x.Received).Sum(x=>x.Amount),
+            PendingRevenue=monthRevenue.Where(x=>!x.Received).Sum(x=>x.Amount),
+            ExpectedReceipts30Days=futureReceipts,DueExpenses30Days=futurePayments,
+            OverdueReceipts=overdueReceipts?.Amount??0,OverdueReceiptsCount=overdueReceipts?.Count??0,
             ProjectedRevenue=projected,Target=target,DailyNeeded=dailyNeeded,Insight=insight,History=history,
             Sources=monthRevenue.GroupBy(x=>x.RevenueItemName).Select(x=>new NamedAmount(x.Key,x.Sum(y=>y.Amount)))
                 .OrderByDescending(x=>x.Amount).Take(6).ToList(),
@@ -68,6 +88,8 @@ public sealed class FinancialService(FinanceDbContext db,RecurringService recurr
             months.Add(new MonthlyPoint(year,m,Pt.DateTimeFormat.GetAbbreviatedMonthName(m).TrimEnd('.'),income,cost,income-cost));
         }
         return new ReportVm {Year=year,Revenue=revenues.Sum(x=>x.Amount),Expenses=expenses.Sum(x=>x.Amount),
+            ReceivedRevenue=revenues.Where(x=>x.Received).Sum(x=>x.Amount),
+            PendingRevenue=revenues.Where(x=>!x.Received).Sum(x=>x.Amount),
             PaidExpenses=expenses.Where(x=>x.Paid).Sum(x=>x.Amount),
             PendingExpenses=expenses.Where(x=>!x.Paid).Sum(x=>x.Amount),
             SourceCount=revenues.Select(x=>x.RevenueItemName).Distinct().Count(),Months=months,

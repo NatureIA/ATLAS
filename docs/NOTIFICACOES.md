@@ -63,3 +63,18 @@ O ATLAS não usa a data registrada como vencimento: uma despesa com competência
 - Nenhuma operação marca despesas como pagas automaticamente.
 - Para alertas de vencimento com dia preciso, o sistema precisará de
   uma data de vencimento independente da competência em todos os lançamentos.
+
+
+## Recebimentos pessoais (sem fluxo comercial)
+
+As receitas preservam a competência no campo `Date`. A previsão de recebimento fica em `ExpectedReceiptDate`, a confirmação em `Received`, e a data efetiva em `ReceivedDate`. São conceitos independentes. Receitas antigas migram como recebidas para preservar a interpretação financeira anterior; a data efetiva histórica não é inventada. Novas receitas pendentes exigem previsão. Não existem recebimentos parciais ou o estado "sem previsão".
+
+A central de recebimentos usa a competência selecionada para os quatro cards clicáveis: **Recebido**, **A receber**, **Em atraso** e **Próximos 7 dias**. As receitas recorrentes novas geram novas competências pendentes, com previsão mensal; séries legadas preservam sua configuração histórica. A confirmação por botão registra a data do dia em Brasília e é auditada.
+
+Os quatro disparos de Web Push permanecem compartilhados entre receitas e despesas, em uma única notificação consolidada por dispositivo e horário:
+- **08h:** receitas em atraso, previstas hoje, amanhã e nos próximos sete dias;
+- **12h:** previstas hoje;
+- **15h:** em atraso;
+- **18h:** previstas hoje ou amanhã.
+
+Os avisos não contêm nomes de pessoas ou valores financeiros na tela bloqueada. O faturamento por competência continua sendo a soma das receitas registradas, independentemente da confirmação. Os resumos de recebimentos são exibidos separadamente e não devem ser interpretados como extrato bancário por data de liquidação.

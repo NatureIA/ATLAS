@@ -55,6 +55,7 @@ public sealed class FinanceDbContext(DbContextOptions<FinanceDbContext> options)
         es.Property(x=>x.ExpenseType).HasMaxLength(40); es.Property(x=>x.PaymentMethod).HasMaxLength(40);
         es.Property(x=>x.Notes).HasMaxLength(1000); es.Property(x=>x.Amount).HasPrecision(18,2);
         es.Property(x=>x.StartDate).HasColumnType("date"); es.Property(x=>x.EndDate).HasColumnType("date");
+        es.Property(x=>x.DueDay).HasColumnType("int");
         es.HasIndex(x=>new{x.UserId,x.Active});
         var i=b.Entity<RevenueItem>(); i.ToTable("AtlasFinRevenueItems"); i.HasKey(x=>x.Id);
         i.Property(x=>x.Name).HasMaxLength(160); i.Property(x=>x.Price).HasPrecision(18,2);

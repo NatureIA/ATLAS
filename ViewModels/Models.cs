@@ -75,6 +75,10 @@ public class GoalInput {
 }
 public record ReceiptBucketVm(string Key,string Label,int Count,decimal Amount);
 public class RevenueListVm {
+    public int Page {get;set;}=1;
+    public int PageSize {get;set;}=100;
+    public int TotalRows {get;set;}
+    public int TotalPages => Math.Max(1,(int)Math.Ceiling(TotalRows/(double)PageSize));
     public DateTime Today {get;set;}
     public string? Status {get;set;}
     public string? Group {get;set;}

@@ -15,15 +15,16 @@ public class RevenueController(FinanceDbContext db,CurrentUser current,AuditServ
         TimeZoneInfo.FindSystemTimeZoneById("America/Sao_Paulo")).Date;
 
     [HttpGet]
-    public async Task<IActionResult> Index(string? search,string? paymentMethod,int? year,int? month,string? status,string? group){
-        if(year is < 2000 or > 2100 || month is < 1 or > 12)return BadRequest();
+    public async Task<IActionResult> Index(string? search,string? paymentMethod,int? year,int? month,string? status,string? group,int page=1){
+        if(year is < 2000 or > 2100 || month is < 0 or > 12 || page<1 || page>100000)return BadRequest();
         if(status is not (null or "" or "received" or "pending"))return BadRequest();
         if(group is not (null or "" or "received" or "pending" or "overdue" or "next7"))return BadRequest();
         var today=TodayBrasilia();
         var selectedYear=year??today.Year;
         var selectedMonth=month??today.Month;
-        var first=new DateTime(selectedYear,selectedMonth,1);
-        var next=first.AddMonths(1);
+        var fullYear=selectedMonth==0;
+        var first=new DateTime(selectedYear,fullYear?1:selectedMonth,1);
+        var next=fullYear?first.AddYears(1):first.AddMonths(1);
         await recurrence.EnsureThroughAsync(current.Id,next.AddDays(-1));
         var competence=db.Revenues.AsNoTracking().Where(x=>x.UserId==current.Id && x.Date>=first && x.Date<next);
         var pending=await competence.Select(x=>new {x.Received,x.ExpectedReceiptDate,x.Amount}).ToListAsync();
@@ -54,9 +55,15 @@ public class RevenueController(FinanceDbContext db,CurrentUser current,AuditServ
                 _=>q
             };
         }
-        var rows=await q.OrderByDescending(x=>x.Date).ThenByDescending(x=>x.Id).Take(500).ToListAsync();
+        const int pageSize=100;
+        var total=await q.CountAsync();
+        var totalPages=Math.Max(1,(int)Math.Ceiling(total/(double)pageSize));
+        if(page>totalPages)page=totalPages;
+        var rows=await q.OrderByDescending(x=>x.Date).ThenByDescending(x=>x.Id)
+            .Skip((page-1)*pageSize).Take(pageSize).ToListAsync();
         return View(new RevenueListVm{Rows=rows,Search=search,PaymentMethod=paymentMethod,
-            Year=selectedYear,Month=selectedMonth,Today=today,Status=status,Group=group,Buckets=buckets});
+            Year=selectedYear,Month=selectedMonth,Today=today,Status=status,Group=group,Buckets=buckets,
+            Page=page,TotalRows=total,PageSize=pageSize});
     }
     [HttpGet] public async Task<IActionResult> Create(){var vm=new RevenueInput();await Options(vm);return View("Form",vm);}
     [HttpPost,ValidateAntiForgeryToken]
@@ -116,12 +123,21 @@ public class RevenueController(FinanceDbContext db,CurrentUser current,AuditServ
             } else {
                 var future=await db.Revenues.Where(x=>x.UserId==current.Id&&x.RecurringSeriesId==seriesId&&x.Date>=row.Date).ToListAsync();
                 var monthOffset=input.ExpectedReceiptDate.HasValue ? (input.ExpectedReceiptDate.Value.Year-row.Date.Year)*12+input.ExpectedReceiptDate.Value.Month-row.Date.Month : 0;
+                var selectedWasReceived=row.Received;
+                var selectedReceivedDate=row.ReceivedDate;
                 foreach(var entry in future){
+                    // A recurring scope updates existing materialized months as well as
+                    // future occurrences generated through SeriesRevision snapshots.
+                    // Do not reuse one actual receipt date for different months.
                     Apply(entry,name,input,false);
                     entry.ExpectedReceiptDate=input.ExpectedReceiptDate.HasValue?
                         RecurringService.RecurringDueDate(entry.Date,input.ExpectedReceiptDate.Value.Day,monthOffset):null;
+                    entry.Received=input.Received;
+                    entry.ReceivedDate=!input.Received?null:
+                        entry.Id==row.Id?(input.ReceivedDate?.Date??(selectedWasReceived?selectedReceivedDate:TodayBrasilia())):
+                        entry.ReceivedDate;
                 }
-                Apply(row,name,input,true);
+                serie.FutureReceived=input.Received;
                 serie.RevenueItemName=name;serie.Amount=input.Amount;serie.PaymentMethod=input.PaymentMethod;
                 serie.ReferenceName=input.ReferenceName;serie.Notes=input.Notes;serie.UpdatedAt=DateTime.UtcNow;
                 serie.ReceiptDay=input.ExpectedReceiptDate?.Day;serie.ReceiptMonthOffset=monthOffset;

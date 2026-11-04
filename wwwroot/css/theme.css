@@ -223,3 +223,12 @@ html[data-atlas-theme="dark"] .expense-due-card:hover{border-color:#578aff;box-s
 html[data-atlas-theme="dark"] .expense-due-card.selected{background:#12264c;border-color:#4b83ec;box-shadow:inset 0 0 0 1px #4b83ec}
 html[data-atlas-theme="dark"] .expense-due-hint{color:#a7b9d7}
 html[data-atlas-theme="dark"] .expense-due-card.selected .expense-due-hint{color:#d4ff24}
+
+
+/* Collapsible expense filters - ATLAS dark theme. */
+html[data-atlas-theme="dark"] .expense-filter-trigger{background:#10192b;color:#eaf1ff;border-color:#2b3c5c}
+html[data-atlas-theme="dark"] .expense-filter-trigger:hover{border-color:#578aff}
+html[data-atlas-theme="dark"] .expense-filter-trigger-icon{color:#d4ff24}
+html[data-atlas-theme="dark"] .expense-filter-active{background:#17335a;color:#bcd4ff}
+html[data-atlas-theme="dark"] .expense-filter-chevron{color:#a7b9d7}
+html[data-atlas-theme="dark"] .expense-filter-disclosure[open] .expense-filter-trigger{border-bottom-color:transparent}

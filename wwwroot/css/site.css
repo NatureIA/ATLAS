@@ -193,3 +193,24 @@
 @media(max-width:650px){.expense-due-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.expense-due-card{padding:15px 13px}.expense-due-count{font-size:27px}.expense-due-heading h3{font-size:16px}}
 @media(max-width:380px){.expense-due-grid{grid-template-columns:1fr 1fr}.expense-due-card{padding:12px}.expense-due-label{font-size:10px}}
 @media(prefers-reduced-motion:reduce){.expense-due-card{transition:none}.expense-due-card:hover{transform:none}}
+
+
+/* Retractable expense filters: native details/summary works without JavaScript. */
+.expense-filter-disclosure{margin:0 0 17px;min-width:0}
+.expense-filter-trigger{display:flex;align-items:center;gap:10px;list-style:none;cursor:pointer;background:#fff;border:1px solid #e1e5df;border-radius:13px;padding:14px 18px;color:#25312a;font-size:12px;font-weight:750;user-select:none;transition:border-color .15s ease}
+.expense-filter-trigger::-webkit-details-marker{display:none}
+.expense-filter-trigger::marker{content:""}
+.expense-filter-trigger:hover{border-color:#a99cf1}
+.expense-filter-trigger:focus-visible{outline:3px solid #8e7af2;outline-offset:3px}
+.expense-filter-trigger-name{display:inline-flex;align-items:center;gap:9px}
+.expense-filter-trigger-icon{font-size:19px;line-height:1;color:#6350e8}
+.expense-filter-open-label{display:none}
+.expense-filter-disclosure[open] .expense-filter-open-label{display:inline}
+.expense-filter-disclosure[open] .expense-filter-closed-label{display:none}
+.expense-filter-disclosure[open] .expense-filter-trigger{border-radius:13px 13px 0 0;border-bottom-color:transparent}
+.expense-filter-disclosure .filter-card{margin:0;border-radius:0 0 13px 13px}
+.expense-filter-active{display:inline-flex;border-radius:999px;padding:5px 9px;background:#eeeafd;color:#5741b8;font-size:10px;font-weight:750}
+.expense-filter-chevron{margin-left:auto;font-size:19px;line-height:1;color:#66736c;transition:transform .15s ease}
+.expense-filter-disclosure[open] .expense-filter-chevron{transform:rotate(180deg)}
+@media(max-width:600px){.expense-filter-trigger{padding:13px 14px}.expense-filter-active{font-size:9px}}
+@media(prefers-reduced-motion:reduce){.expense-filter-trigger,.expense-filter-chevron{transition:none}}

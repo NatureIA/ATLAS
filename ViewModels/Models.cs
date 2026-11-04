@@ -75,6 +75,7 @@ public class GoalInput {
 }
 public record ReceiptBucketVm(string Key,string Label,int Count,decimal Amount);
 public class RevenueListVm {
+    public DateTime Today {get;set;}
     public string? Status {get;set;}
     public string? Group {get;set;}
     public List<ReceiptBucketVm> Buckets {get;set;}=[];

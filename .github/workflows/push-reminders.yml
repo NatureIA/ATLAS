@@ -1,7 +1,7 @@
 name: ATLAS - verificação de pendências a cada 10 minutos
 on:
   schedule:
-    # Consulta e wake-up do site em intervalos de 10 minutos; envio e limitado a 1 aviso/dispositivo/dia.
+    # Consulta e wake-up do site em intervalos de 10 minutos; envio ocorre apenas nos horarios 08h, 12h, 15h e 18h de Brasilia, ate 4 avisos/dispositivo/dia.
     - cron: '3,13,23,33,43,53 * * * *'
   workflow_dispatch:
 

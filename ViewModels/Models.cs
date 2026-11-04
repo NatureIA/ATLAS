@@ -113,6 +113,11 @@ public class DashboardVm {
     public decimal ProjectedRevenue {get;set;}
     public decimal ReceivedRevenue {get;set;}
     public decimal PendingRevenue {get;set;}
+    public decimal ExpectedReceipts30Days {get;set;}
+    public decimal DueExpenses30Days {get;set;}
+    public decimal ExpectedCashflow30Days => ExpectedReceipts30Days-DueExpenses30Days;
+    public decimal OverdueReceipts {get;set;}
+    public int OverdueReceiptsCount {get;set;}
     public decimal Target {get;set;}
     public decimal Remaining => Math.Max(0,Target-Revenue);
     public decimal DailyNeeded {get;set;}

@@ -1,53 +1,146 @@
 @model DashboardVm
-@{ ViewData["Title"]="Visão geral";
-  var selected=new DateTime(Model.Year,Model.Month,1);
-  var prev=selected.AddMonths(-1);var next=selected.AddMonths(1);
-  var monthName=selected.ToString("MMMM yyyy",new CultureInfo("pt-BR"));
+@{
+  ViewData["Title"]="Visão geral";
+  var selected=new DateTime(Model.Year,Model.Month==0?1:Model.Month,1);
+  var previous=selected.AddMonths(-1);
+  var following=selected.AddMonths(1);
+  var expensesMonth=Model.Month==0?Model.Today.Month:Model.Month;
 }
-<div class="section-heading"><div><div class="eyebrow">RESUMO DO PERÍODO</div><h2>Seu desempenho em números.</h2><p class="muted">Indicadores calculados diretamente dos lançamentos.</p></div>
-  <div class="period-picker"><a asp-action="Index" asp-route-year="@prev.Year" asp-route-month="@prev.Month" aria-label="Mês anterior">‹</a>
-    <strong>@monthName</strong><a asp-action="Index" asp-route-year="@next.Year" asp-route-month="@next.Month" aria-label="Próximo mês">›</a></div>
-</div>
-<div class="metrics-grid">
- <div class="metric-card metric-primary"><div class="metric-label">Resultado do período <span class="metric-arrow">↗</span></div>
-   <strong class="metric-number">@Model.Profit.ToString("C")</strong><small>Faturamento menos despesas</small></div>
- <div class="metric-card"><div class="metric-label">Faturamento <span class="trend-up">↗</span></div><strong class="metric-number">@Model.Revenue.ToString("C")</strong><small>@Model.SalesCount entradas nesta competência</small></div>
- <div class="metric-card"><div class="metric-label">Despesas <span class="trend-neutral">↙</span></div><strong class="metric-number">@Model.Expenses.ToString("C")</strong><small>@(selected>=new DateTime(DateTime.Today.Year,DateTime.Today.Month,1)?"Pagas e compromissos":"Somente despesas pagas")</small></div>
- <div class="metric-card"><div class="metric-label">Ticket médio <span class="trend-neutral">◌</span></div><strong class="metric-number">@Model.Ticket.ToString("C")</strong><small>Média por entrada</small></div>
-</div>
-<div class="insight-card"><span class="insight-icon">✦</span><div><div class="eyebrow">LEITURA FINANCEIRA</div><p>@Model.Insight</p></div><span class="insight-side">ATLAS INSIGHT</span></div>
-<div class="summary-secondary">
- <div><small>Margem operacional</small><strong>@Model.Margin.ToString("N1")%</strong></div>
- <div><small>Projeção de faturamento</small><strong>@Model.ProjectedRevenue.ToString("C")</strong></div>
- <div><small>Meta da competência</small><strong>@Model.Target.ToString("C")</strong></div>
- <div><small>Falta para a meta</small><strong>@Model.Remaining.ToString("C")</strong></div>
- <div><small>Necessário por dia</small><strong>@Model.DailyNeeded.ToString("C")</strong></div>
-</div>
-<section class="revenue-receipt-summary" aria-label="Situação dos recebimentos">
- <a asp-controller="Revenue" asp-action="Index" asp-route-year="@Model.Year" asp-route-month="@Model.Month" asp-route-group="received" class="revenue-receipt-summary-card"><small>Recebido na competência</small><strong>@Model.ReceivedRevenue.ToString("C")</strong></a>
- <a asp-controller="Revenue" asp-action="Index" asp-route-year="@Model.Year" asp-route-month="@Model.Month" asp-route-group="pending" class="revenue-receipt-summary-card"><small>A receber na competência</small><strong>@Model.PendingRevenue.ToString("C")</strong></a>
-</section>
-<section class="revenue-cashflow-outlook" aria-label="Projeção de fluxo de caixa">
-  <div class="revenue-cashflow-title"><h3>Previsão de fluxo de caixa</h3><small>Próximos 30 dias · valores com data informada</small></div>
-  <div class="revenue-cashflow-grid">
-    <div class="revenue-cashflow-stat"><small>Entradas previstas</small><strong>@Model.ExpectedReceipts30Days.ToString("C")</strong></div>
-    <div class="revenue-cashflow-stat"><small>Saídas previstas</small><strong>@Model.DueExpenses30Days.ToString("C")</strong></div>
-    <div class="revenue-cashflow-stat"><small>Diferença prevista</small><strong>@Model.ExpectedCashflow30Days.ToString("C")</strong></div>
-    <div class="revenue-cashflow-stat"><small>Recebimentos em atraso</small><strong>@Model.OverdueReceipts.ToString("C")</strong><span>@Model.OverdueReceiptsCount pendente(s)</span></div>
+<div class="atlas-overview" id="atlasOverview">
+  <div class="atlas-overview-head">
+    <div class="atlas-period-controls" aria-label="Competência">
+      @if(!Model.FullYear){
+        <a asp-action="Index" asp-route-year="@previous.Year" asp-route-month="@previous.Month" aria-label="Competência anterior">‹</a>
+      }
+      <strong>@Model.PeriodLabel</strong>
+      @if(!Model.FullYear){
+        <a asp-action="Index" asp-route-year="@following.Year" asp-route-month="@following.Month" aria-label="Próxima competência">›</a>
+      }
+    </div>
+    <div class="atlas-overview-shortcuts">
+      <a asp-action="Index" asp-route-year="@Model.Today.Year" asp-route-month="@Model.Today.Month" class="atlas-small-link" aria-current="@(!Model.FullYear&&Model.Month==Model.Today.Month&&Model.Year==Model.Today.Year?"page":null)">Mês atual</a>
+      <a asp-action="Index" asp-route-year="@Model.Year" asp-route-month="0" class="atlas-small-link" aria-current="@(Model.FullYear?"page":null)">Ano inteiro</a>
+    </div>
   </div>
-  <p class="revenue-cashflow-note">Projeção de compromissos cadastrados, não saldo bancário. Não inclui lançamentos sem data prevista.</p>
-</section>
-<div class="content-grid main-split">
- <section class="card"><div class="card-title"><div><div class="eyebrow">ÚLTIMOS 6 MESES</div><h3>Evolução financeira</h3></div><span class="card-meta">Comparativo mensal</span></div>
-   <partial name="_Chart" model="Model.History" /></section>
- <section class="card"><div class="card-title"><div><div class="eyebrow">PARTICIPAÇÃO</div><h3>Fontes de receita</h3></div></div>
-   <partial name="_Ranking" model="Model.Sources" /></section>
-</div>
-<div class="content-grid bottom-split">
- <section class="card"><div class="card-title"><div><div class="eyebrow">LANÇAMENTOS</div><h3>Movimentações recentes</h3></div><a class="text-link" asp-controller="Revenue" asp-action="Index">Ver todas ↗</a></div>
- @if(Model.Recent.Count==0){<div class="empty-inline">Nenhuma receita registrada neste período.</div>}
- else{<div class="recent-list">@foreach(var r in Model.Recent){<a asp-controller="Revenue" asp-action="Edit" asp-route-id="@r.Id" class="recent-row"><span class="recent-symbol">↗</span><span><strong>@r.RevenueItemName</strong><small>@r.PaymentMethod · @r.Date.ToString("dd/MM/yyyy")</small></span><b>@r.Amount.ToString("C")</b></a>}</div>}
- </section>
- <section class="card"><div class="card-title"><div><div class="eyebrow">DISTRIBUIÇÃO</div><h3>Despesas por categoria</h3></div></div>
- <partial name="_Ranking" model="Model.Categories" /></section>
+
+  <section aria-labelledby="atlasOverviewSummary" class="atlas-overview-section">
+    <h2 id="atlasOverviewSummary" class="atlas-overview-section-title">Resumo financeiro</h2>
+    <div class="atlas-overview-metrics">
+      <a asp-controller="Revenue" asp-action="Index" asp-route-year="@Model.Year" asp-route-month="@Model.Month" class="atlas-overview-metric">
+        <span>Faturamento</span><strong>@Model.Revenue.ToString("C")</strong><small>Receitas da competência</small>
+      </a>
+      <a asp-controller="Revenue" asp-action="Index" asp-route-year="@Model.Year" asp-route-month="@Model.Month" asp-route-group="received" class="atlas-overview-metric">
+        <span>Recebido</span><strong>@Model.ReceivedRevenue.ToString("C")</strong><small>Receitas confirmadas</small>
+      </a>
+      <a asp-controller="Expenses" asp-action="Index" asp-route-year="@Model.Year" asp-route-month="@expensesMonth" class="atlas-overview-metric">
+        <span>Despesas</span><strong>@Model.Expenses.ToString("C")</strong><small>Pagas e pendentes da competência</small>
+      </a>
+      <div class="atlas-overview-metric atlas-overview-metric-emphasis">
+        <span>Resultado</span><strong>@Model.Profit.ToString("C")</strong><small>Faturamento − despesas</small>
+      </div>
+    </div>
+    @if(Model.FullYear){
+      <p class="atlas-overview-footnote">O resultado anual considera todas as receitas e despesas de @Model.Year. Para consultar despesas específicas por competência, utilize os filtros no módulo Despesas.</p>
+    }
+  </section>
+
+  <section class="atlas-overview-section" aria-labelledby="atlasAttentionTitle">
+    <div class="atlas-overview-section-heading">
+      <h2 id="atlasAttentionTitle" class="atlas-overview-section-title">Atenção financeira</h2>
+      <span>Posição atual · @Model.Today.ToString("dd/MM/yyyy")</span>
+    </div>
+    <div class="atlas-attention-grid">
+      @foreach(var alert in Model.Alerts){
+        <a href="@alert.Url" class="atlas-attention-item">
+          <span class="atlas-attention-label">@alert.Label</span>
+          <strong>@alert.Amount.ToString("C")</strong>
+          <small>@alert.Count lançamento(s) · Abrir módulo ↗</small>
+        </a>
+      }
+    </div>
+    <p class="atlas-overview-footnote">Atenção considera vencimentos e recebimentos previstos em todas as competências. Os módulos de destino possuem filtros próprios.</p>
+  </section>
+
+  <section class="atlas-insight-simple" aria-labelledby="atlasInsightTitle">
+    <div><span class="atlas-insight-mark" aria-hidden="true">✦</span><strong id="atlasInsightTitle">ATLAS Insight</strong></div>
+    <p>@Model.Insight</p>
+  </section>
+
+  <section class="atlas-overview-section" aria-labelledby="atlasCashflowTitle">
+    <div class="atlas-overview-section-heading">
+      <h2 id="atlasCashflowTitle" class="atlas-overview-section-title">Fluxo de caixa previsto</h2>
+      <div class="atlas-horizon" role="group" aria-label="Período da previsão">
+        <button type="button" data-horizon="7">7 dias</button>
+        <button type="button" data-horizon="15">15 dias</button>
+        <button type="button" data-horizon="30" aria-pressed="true">30 dias</button>
+        <button type="button" data-horizon="90">90 dias</button>
+      </div>
+    </div>
+    <div class="atlas-cashflow-grid">
+      <div><small>Entradas previstas</small><strong id="atlasCashIn">@Model.ExpectedReceipts30Days.ToString("C")</strong></div>
+      <div><small>Saídas previstas</small><strong id="atlasCashOut">@Model.DueExpenses30Days.ToString("C")</strong></div>
+      <div><small>Diferença prevista</small><strong id="atlasCashNet">@Model.ExpectedCashflow30Days.ToString("C")</strong></div>
+    </div>
+    <div class="atlas-cashflow-chart" id="atlasCashflowChart">
+      <svg id="atlasCashflowSvg" viewBox="0 0 960 240" role="img" aria-label="Variação acumulada entre entradas e saídas previstas em reais" preserveAspectRatio="xMidYMid meet"></svg>
+      <div class="atlas-cashflow-data" hidden>
+        @foreach(var point in Model.CashflowDays){
+          <span data-day="@point.Day" data-in="@point.Incoming.ToString(CultureInfo.InvariantCulture)" data-out="@point.Outgoing.ToString(CultureInfo.InvariantCulture)" data-net="@point.Net.ToString(CultureInfo.InvariantCulture)"></span>
+        }
+      </div>
+    </div>
+    <p class="atlas-overview-footnote">Projeção acumulada dos lançamentos pendentes com data informada, a partir de hoje. Não representa saldo bancário e não inclui atrasados ou valores sem data no gráfico.</p>
+  </section>
+
+  <details class="atlas-overview-details" open>
+    <summary><span>Análises e histórico</span><span class="atlas-overview-detail-state">Ocultar / Exibir</span></summary>
+    <div class="atlas-overview-detail-body">
+      <div class="atlas-overview-analysis-grid">
+        <section class="card">
+          <div class="card-title"><h3>Evolução financeira</h3><span class="card-meta">@(Model.FullYear?"12 meses":"Últimos 6 meses")</span></div>
+          <partial name="_Chart" model="Model.History" />
+        </section>
+        <section class="card">
+          <div class="card-title"><h3>Receitas por origem</h3></div>
+          <partial name="_Ranking" model="Model.Sources" />
+        </section>
+      </div>
+      <div class="atlas-overview-analysis-grid">
+        <section class="card">
+          <div class="card-title"><h3>Movimentações recentes</h3></div>
+          @if(Model.Activity.Count==0){<div class="empty-inline">Nenhuma movimentação nesta competência.</div>}
+          else{
+            <div class="recent-list">
+              @foreach(var activity in Model.Activity){
+                <a asp-controller="@(activity.IsRevenue?"Revenue":"Expenses")" asp-action="Edit" asp-route-id="@activity.Id" class="recent-row">
+                  <span class="recent-symbol">@(activity.IsRevenue?"↗":"↙")</span>
+                  <span><strong>@activity.Name</strong><small>@activity.Date.ToString("dd/MM/yyyy") · @activity.Status</small></span>
+                  <b class="@(activity.IsRevenue?"amount-positive":"amount-negative")">@(activity.IsRevenue?"+":"−")@activity.Amount.ToString("C")</b>
+                </a>
+              }
+            </div>
+          }
+        </section>
+        <section class="card">
+          <div class="card-title"><h3>Despesas por categoria</h3></div>
+          <partial name="_Ranking" model="Model.Categories" />
+        </section>
+      </div>
+    </div>
+  </details>
+  <details class="atlas-overview-details">
+    <summary><span>Metas e indicadores adicionais</span><span class="atlas-overview-detail-state">Ocultar / Exibir</span></summary>
+    <div class="atlas-overview-extra">
+      <div><small>Margem por competência</small><strong>@Model.Margin.ToString("N1")%</strong></div>
+      <div><small>Ticket médio</small><strong>@Model.Ticket.ToString("C")</strong></div>
+      <div><small>Receitas a receber na competência</small><strong>@Model.PendingRevenue.ToString("C")</strong></div>
+      <div><small>Despesas pagas na competência</small><strong>@Model.ExpensesPaidInPeriod.ToString("C")</strong></div>
+      @if(!Model.FullYear){
+        <div><small>Meta da competência</small><strong>@Model.Target.ToString("C")</strong></div>
+        <div><small>Falta para a meta</small><strong>@Model.Remaining.ToString("C")</strong></div>
+        <div><small>Projeção de faturamento</small><strong>@Model.ProjectedRevenue.ToString("C")</strong></div>
+        <div><small>Necessário por dia</small><strong>@Model.DailyNeeded.ToString("C")</strong></div>
+      }
+    </div>
+  </details>
 </div>

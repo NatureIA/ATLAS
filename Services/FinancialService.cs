@@ -12,66 +12,113 @@ public sealed class FinancialService(FinanceDbContext db,RecurringService recurr
         var start=new DateTime(year,month,1);return(start,start.AddMonths(1));
     }
     public async Task<DashboardVm> DashboardAsync(int userId,int year,int month) {
-        var (start,end)=Range(year,month);
-        await recurrence.EnsureThroughAsync(userId,end.AddMonths(-1));
-        var since=start.AddMonths(-5);
-        var r=await db.Revenues.AsNoTracking().Where(x=>x.UserId==userId&&x.Date>=since&&x.Date<end).ToListAsync();
-        var e=await db.Expenses.AsNoTracking().Where(x=>x.UserId==userId&&x.Date>=since&&x.Date<end).ToListAsync();
-        var monthRevenue=r.Where(x=>x.Date>=start&&x.Date<end).OrderByDescending(x=>x.Date).ThenByDescending(x=>x.Id).ToList();
-        var monthExpenses=e.Where(x=>x.Date>=start&&x.Date<end).ToList();
-        var today=DateTime.Today;
-        bool includeScheduled=start>=RecurringService.Month(today);
-        var basis=includeScheduled?monthExpenses:monthExpenses.Where(x=>x.Paid).ToList();
-        var revenue=monthRevenue.Sum(x=>x.Amount);
-        var expenses=basis.Sum(x=>x.Amount);
-        // Cashflow outlook uses actual expected dates, never accounting competence;
-        // omit undated obligations, and do not imply a bank-account balance.
-        var brasiliaToday=TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow,
+        if(year is < 2000 or > 2100 || month is < 0 or > 12)throw new ArgumentOutOfRangeException(nameof(month));
+        var fullYear=month==0;
+        var start=new DateTime(year,fullYear?1:month,1);
+        var end=fullYear?start.AddYears(1):start.AddMonths(1);
+        var today=TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow,
             TimeZoneInfo.FindSystemTimeZoneById("America/Sao_Paulo")).Date;
-        var forecastEnd=brasiliaToday.AddDays(30);
-        await recurrence.EnsureThroughAsync(userId,forecastEnd);
-        var futureReceipts=await db.Revenues.AsNoTracking()
-            .Where(x=>x.UserId==userId && !x.Received && x.ExpectedReceiptDate>=brasiliaToday && x.ExpectedReceiptDate<=forecastEnd)
-            .SumAsync(x=>x.Amount);
-        var futurePayments=await db.Expenses.AsNoTracking()
-            .Where(x=>x.UserId==userId && !x.Paid && x.DueDate>=brasiliaToday && x.DueDate<=forecastEnd)
-            .SumAsync(x=>x.Amount);
-        var overdueReceipts=await db.Revenues.AsNoTracking()
-            .Where(x=>x.UserId==userId && !x.Received && x.ExpectedReceiptDate<brasiliaToday)
-            .GroupBy(x=>1).Select(g=>new {Count=g.Count(),Amount=g.Sum(x=>x.Amount)})
-            .FirstOrDefaultAsync();
-        var targetGoal=await db.Goals.AsNoTracking().Where(x=>x.UserId==userId && (x.Deadline==null || (x.Deadline>=start&&x.Deadline<end)))
+        var horizon=today.AddDays(90);
+        // Recurring entries are generated only through the required horizon.
+        // Previously recorded financial rows and historical statuses are not rewritten.
+        await recurrence.EnsureThroughAsync(userId,end.AddDays(-1)>horizon?end.AddDays(-1):horizon);
+        var chartStart=fullYear?start:start.AddMonths(-5);
+        var revenues=await db.Revenues.AsNoTracking()
+            .Where(x=>x.UserId==userId && x.Date>=chartStart && x.Date<end).ToListAsync();
+        var expenses=await db.Expenses.AsNoTracking()
+            .Where(x=>x.UserId==userId && x.Date>=chartStart && x.Date<end).ToListAsync();
+        var periodRevenue=revenues.Where(x=>x.Date>=start).ToList();
+        var periodExpenses=expenses.Where(x=>x.Date>=start).ToList();
+        var revenue=periodRevenue.Sum(x=>x.Amount);
+        // Accounting result consistently includes paid and unpaid commitments in every month.
+        var expenseTotal=periodExpenses.Sum(x=>x.Amount);
+        var received=periodRevenue.Where(x=>x.Received).Sum(x=>x.Amount);
+        var expensePaid=periodExpenses.Where(x=>x.Paid).Sum(x=>x.Amount);
+
+        // Attention is based on actual due/expected dates, independent of the selected competence.
+        var outstandingExpenses=await db.Expenses.AsNoTracking()
+            .Where(x=>x.UserId==userId && !x.Paid && x.DueDate!=null)
+            .Select(x=>new {x.Amount,x.DueDate}).ToListAsync();
+        var outstandingRevenues=await db.Revenues.AsNoTracking()
+            .Where(x=>x.UserId==userId && !x.Received && x.ExpectedReceiptDate!=null)
+            .Select(x=>new {x.Amount,x.ExpectedReceiptDate}).ToListAsync();
+        var lateExpenses=outstandingExpenses.Where(x=>x.DueDate!.Value.Date<today).ToList();
+        var lateReceipts=outstandingRevenues.Where(x=>x.ExpectedReceiptDate!.Value.Date<today).ToList();
+        var dueExpenses=outstandingExpenses.Where(x=>x.DueDate!.Value.Date>=today && x.DueDate.Value.Date<=today.AddDays(7)).ToList();
+        var dueReceipts=outstandingRevenues.Where(x=>x.ExpectedReceiptDate!.Value.Date>=today && x.ExpectedReceiptDate.Value.Date<=today.AddDays(7)).ToList();
+        var alerts=new List<FinancialAlertVm> {
+            new("expense-late","Despesas vencidas",lateExpenses.Count,lateExpenses.Sum(x=>x.Amount),"/Expenses?dueGroup=overdue"),
+            new("revenue-late","Recebimentos atrasados",lateReceipts.Count,lateReceipts.Sum(x=>x.Amount),"/Revenue?group=overdue"),
+            new("expense-next","Despesas nos próximos 7 dias",dueExpenses.Count,dueExpenses.Sum(x=>x.Amount),"/Expenses"),
+            new("revenue-next","A receber nos próximos 7 dias",dueReceipts.Count,dueReceipts.Sum(x=>x.Amount),"/Revenue?group=next7")
+        };
+        // A dated cashflow is a cumulative delta, not an account balance.
+        var incomingByDay=outstandingRevenues
+            .Where(x=>x.ExpectedReceiptDate!.Value.Date>=today && x.ExpectedReceiptDate.Value.Date<=horizon)
+            .GroupBy(x=>x.ExpectedReceiptDate!.Value.Date)
+            .ToDictionary(g=>g.Key,g=>g.Sum(x=>x.Amount));
+        var outgoingByDay=outstandingExpenses
+            .Where(x=>x.DueDate!.Value.Date>=today && x.DueDate.Value.Date<=horizon)
+            .GroupBy(x=>x.DueDate!.Value.Date)
+            .ToDictionary(g=>g.Key,g=>g.Sum(x=>x.Amount));
+        var cashflow=new List<CashflowDayVm>();
+        var cumulative=0m;
+        for(var day=0;day<=90;day++) {
+            var date=today.AddDays(day);
+            incomingByDay.TryGetValue(date,out var incoming);
+            outgoingByDay.TryGetValue(date,out var outgoing);
+            cumulative+=incoming-outgoing;
+            cashflow.Add(new CashflowDayVm(day,incoming,outgoing,cumulative));
+        }
+        var history=new List<MonthlyPoint>();
+        for(var d=chartStart;d<end;d=d.AddMonths(1)) {
+            var upper=d.AddMonths(1);
+            var rr=revenues.Where(x=>x.Date>=d && x.Date<upper).ToList();
+            var ee=expenses.Where(x=>x.Date>=d && x.Date<upper).Sum(x=>x.Amount);
+            var total=rr.Sum(x=>x.Amount);
+            history.Add(new MonthlyPoint(d.Year,d.Month,
+                Pt.DateTimeFormat.GetAbbreviatedMonthName(d.Month).TrimEnd('.'),
+                total,ee,total-ee,rr.Where(x=>x.Received).Sum(x=>x.Amount)));
+        }
+        var activity=periodRevenue.Select(x=>new FinanceActivityVm(x.Id,true,x.RevenueItemName,x.Date,x.Amount,x.Received?"Recebido":"A receber"))
+            .Concat(periodExpenses.Select(x=>new FinanceActivityVm(x.Id,false,x.Description,x.Date,x.Amount,x.Paid?"Pago":"Pendente")))
+            .OrderByDescending(x=>x.Date).ThenByDescending(x=>x.Id).Take(8).ToList();
+        var currentPeriod=!fullYear && year==today.Year && month==today.Month;
+        var targetGoal=fullYear?null:await db.Goals.AsNoTracking()
+            .Where(x=>x.UserId==userId && (x.Deadline==null || (x.Deadline>=start && x.Deadline<end)))
             .OrderByDescending(x=>x.Id).FirstOrDefaultAsync();
         var target=targetGoal?.TargetAmount??0m;
         var remaining=Math.Max(0,target-revenue);
-        var isCurrent=year==today.Year&&month==today.Month;
-        var dailyNeeded=isCurrent&&target>0?remaining/(DateTime.DaysInMonth(year,month)-today.Day+1):0;
-        var elapsed=isCurrent?today.Day:DateTime.DaysInMonth(year,month);
-        var projected=elapsed>0?revenue/elapsed*DateTime.DaysInMonth(year,month):revenue;
-        var margin=revenue==0?0:(revenue-expenses)/revenue*100;
-        string insight=target>0&&revenue>=target ? $"Meta atingida: {Fmt(revenue-target)} acima do objetivo." :
-            isCurrent&&target>0 ? $"Faltam {Fmt(remaining)} para a meta. Ritmo necessário: {Fmt(dailyNeeded)} por dia." :
-            revenue==0?"Ainda não há receitas registradas nesta competência.":
-            $"Sua margem operacional é de {margin:N1}% nesta competência.";
-        var history=new List<MonthlyPoint>();
-        for(var i=0;i<6;i++){
-            var d=since.AddMonths(i);var until=d.AddMonths(1);
-            var rr=r.Where(x=>x.Date>=d&&x.Date<until).Sum(x=>x.Amount);
-            var all=e.Where(x=>x.Date>=d&&x.Date<until);
-            var ee=(d>=RecurringService.Month(today)?all:all.Where(x=>x.Paid)).Sum(x=>x.Amount);
-            history.Add(new MonthlyPoint(d.Year,d.Month,Pt.DateTimeFormat.GetAbbreviatedMonthName(d.Month).TrimEnd('.'),rr,ee,rr-ee));
-        }
-        return new DashboardVm {Year=year,Month=month,Revenue=revenue,Expenses=expenses,SalesCount=monthRevenue.Count,
-            ReceivedRevenue=monthRevenue.Where(x=>x.Received).Sum(x=>x.Amount),
-            PendingRevenue=monthRevenue.Where(x=>!x.Received).Sum(x=>x.Amount),
-            ExpectedReceipts30Days=futureReceipts,DueExpenses30Days=futurePayments,
-            OverdueReceipts=overdueReceipts?.Amount??0,OverdueReceiptsCount=overdueReceipts?.Count??0,
-            ProjectedRevenue=projected,Target=target,DailyNeeded=dailyNeeded,Insight=insight,History=history,
-            Sources=monthRevenue.GroupBy(x=>x.RevenueItemName).Select(x=>new NamedAmount(x.Key,x.Sum(y=>y.Amount)))
-                .OrderByDescending(x=>x.Amount).Take(6).ToList(),
-            Categories=basis.GroupBy(x=>x.Category).Select(x=>new NamedAmount(x.Key,x.Sum(y=>y.Amount)))
-                .OrderByDescending(x=>x.Amount).Take(7).ToList(),
-            Recent=monthRevenue.Take(8).ToList()};
+        var daysLeft=currentPeriod?DateTime.DaysInMonth(year,month)-today.Day+1:1;
+        var dailyNeeded=currentPeriod&&target>0?remaining/daysLeft:0m;
+        var elapsed=currentPeriod?today.Day:(fullYear?365:DateTime.DaysInMonth(year,month));
+        var projected=currentPeriod&&elapsed>0?revenue/elapsed*DateTime.DaysInMonth(year,month):revenue;
+        string insight=lateExpenses.Count>0||lateReceipts.Count>0
+            ?$"Atenção: {lateExpenses.Count} despesa(s) vencida(s) ({Fmt(lateExpenses.Sum(x=>x.Amount))}) e {lateReceipts.Count} recebimento(s) atrasado(s) ({Fmt(lateReceipts.Sum(x=>x.Amount))})."
+            :dueExpenses.Count>0||dueReceipts.Count>0
+                ?$"Nos próximos 7 dias, há {Fmt(dueReceipts.Sum(x=>x.Amount))} a receber e {Fmt(dueExpenses.Sum(x=>x.Amount))} a pagar."
+                :target>0&&revenue>=target?$"Meta atingida: {Fmt(revenue-target)} acima do objetivo."
+                :currentPeriod&&target>0?$"Faltam {Fmt(remaining)} para a meta mensal."
+                :$"Sem vencimentos ou recebimentos previstos para os próximos 7 dias. Resultado da competência: {Fmt(revenue-expenseTotal)}.";
+        return new DashboardVm {
+            Year=year,Month=month,FullYear=fullYear,Today=today,
+            PeriodLabel=fullYear?$"Ano de {year}":start.ToString("MMMM yyyy",Pt),
+            Revenue=revenue,Expenses=expenseTotal,SalesCount=periodRevenue.Count,
+            ReceivedRevenue=received,ReceivedInPeriod=received,
+            PendingRevenue=periodRevenue.Where(x=>!x.Received).Sum(x=>x.Amount),
+            ExpensesPaidInPeriod=expensePaid,
+            ExpectedReceipts30Days=cashflow.Take(31).Sum(x=>x.Incoming),
+            DueExpenses30Days=cashflow.Take(31).Sum(x=>x.Outgoing),
+            OverdueReceipts=lateReceipts.Sum(x=>x.Amount),
+            OverdueReceiptsCount=lateReceipts.Count,
+            Alerts=alerts,CashflowDays=cashflow,Activity=activity,
+            Target=target,DailyNeeded=dailyNeeded,ProjectedRevenue=projected,Insight=insight,History=history,
+            Sources=periodRevenue.GroupBy(x=>x.RevenueItemName)
+                .Select(g=>new NamedAmount(g.Key,g.Sum(x=>x.Amount))).OrderByDescending(x=>x.Amount).Take(6).ToList(),
+            Categories=periodExpenses.GroupBy(x=>x.Category)
+                .Select(g=>new NamedAmount(g.Key,g.Sum(x=>x.Amount))).OrderByDescending(x=>x.Amount).Take(7).ToList(),
+            Recent=periodRevenue.OrderByDescending(x=>x.Date).Take(8).ToList()
+        };
     }
     public async Task<ReportVm> ReportAsync(int userId,int year) {
         if(year is < 2000 or > 2100)throw new ArgumentOutOfRangeException(nameof(year));

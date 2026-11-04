@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Atlas.Data;
 public sealed class FinanceDbContext(DbContextOptions<FinanceDbContext> options) : DbContext(options) {
     public DbSet<AppUser> Users => Set<AppUser>();
+    public DbSet<PushDeviceSubscription> PushDevices => Set<PushDeviceSubscription>();
     public DbSet<RevenueEntry> Revenues => Set<RevenueEntry>();
     public DbSet<ExpenseEntry> Expenses => Set<ExpenseEntry>();
     public DbSet<RecurringRevenueSeries> RevenueSeries => Set<RecurringRevenueSeries>();
@@ -19,6 +20,15 @@ public sealed class FinanceDbContext(DbContextOptions<FinanceDbContext> options)
         u.Property(x=>x.Nome).HasMaxLength(120); u.Property(x=>x.Email).HasMaxLength(180);
         u.Property(x=>x.PasswordHash).HasMaxLength(300); u.Property(x=>x.Role).HasMaxLength(20);
         u.HasIndex(x=>x.Email).IsUnique();
+        var push=b.Entity<PushDeviceSubscription>();
+        push.ToTable("AtlasPushSubscriptions");push.HasKey(x=>x.Id);
+        push.Property(x=>x.EndpointHash).HasMaxLength(64).IsUnicode(false);
+        push.HasIndex(x=>x.EndpointHash).IsUnique();
+        push.Property(x=>x.Endpoint).HasMaxLength(2048);
+        push.Property(x=>x.P256dh).HasMaxLength(512);
+        push.Property(x=>x.Auth).HasMaxLength(256);
+        push.Property(x=>x.LastNotifiedDay).HasColumnType("date");
+        push.HasIndex(x=>new{x.UserId,x.Active});
         var r=b.Entity<RevenueEntry>(); r.ToTable("AtlasFinRevenueEntries"); r.HasKey(x=>x.Id);
         r.Property(x=>x.RevenueItemName).HasMaxLength(160); r.Property(x=>x.PaymentMethod).HasMaxLength(40);
         r.Property(x=>x.ReferenceName).HasMaxLength(160); r.Property(x=>x.Notes).HasMaxLength(1000);

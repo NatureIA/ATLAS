@@ -107,7 +107,13 @@ public class ExpensesController(FinanceDbContext db,CurrentUser current,AuditSer
                 audit.Add("UPDATE","RecurringExpenseOccurrence",row.Id,new {seriesId,month=RecurringService.Key(row.Date),scope,input.Amount,cat,input.Paid});
             } else {
                 var future=await db.Expenses.Where(x=>x.UserId==current.Id&&x.RecurringSeriesId==seriesId&&x.Date>=row.Date).ToListAsync();
-                foreach(var entry in future)Apply(entry,input,cat,false);
+                foreach(var entry in future){
+                    Apply(entry,input,cat,false);
+                    entry.DueDate=input.DueDate.HasValue
+                        ?RecurringService.RecurringDueDate(entry.Date,input.DueDate.Value.Day,
+                            (input.DueDate.Value.Year-row.Date.Year)*12+input.DueDate.Value.Month-row.Date.Month)
+                        :null;
+                }
                 row.Paid=input.Paid;
                 series.DueDay=input.DueDate?.Day;
                 series.DueMonthOffset=input.DueDate.HasValue ? (input.DueDate.Value.Year-row.Date.Year)*12+input.DueDate.Value.Month-row.Date.Month : 0;
@@ -155,6 +161,8 @@ public class ExpensesController(FinanceDbContext db,CurrentUser current,AuditSer
             ModelState.AddModelError(nameof(input.ExpenseType),"Tipo de despesa inválido.");
         if(input.Category=="__new__"&&string.IsNullOrWhiteSpace(input.NewCategory))
             ModelState.AddModelError(nameof(input.NewCategory),"Informe a nova categoria.");
+        if(input.FirstDueDate.HasValue && input.FirstDueDate.Value.Year is < 2000 or > 2100)
+            ModelState.AddModelError(nameof(input.FirstDueDate),"Informe um vencimento válido.");
         if(input.FirstInstallmentDate.Year is < 2000 or > 2100)
             ModelState.AddModelError(nameof(input.FirstInstallmentDate),"Informe uma data válida.");
 
@@ -209,9 +217,9 @@ public class ExpensesController(FinanceDbContext db,CurrentUser current,AuditSer
                     InstallmentTotal=input.Installments,Description=input.Description.Trim(),
                     Category=category,ExpenseType=input.ExpenseType,Amount=input.Amount,
                     PaymentMethod=input.PaymentMethod,Date=date,Paid=false,Notes=input.Notes,
+                    DueDate=input.FirstDueDate.HasValue?RecurringService.OccurrenceDate(input.FirstDueDate.Value,new DateTime(input.FirstDueDate.Value.Year,input.FirstDueDate.Value.Month,1).AddMonths(number-1)):null,
                     CreatedAt=DateTime.UtcNow
                 });
-                if(input.FirstDueDate.HasValue) db.Expenses.Local.Last().DueDate=RecurringService.OccurrenceDate(input.FirstDueDate.Value,new DateTime(input.FirstDueDate.Value.Year,input.FirstDueDate.Value.Month,1).AddMonths(number-1));
                 created++;
             } else {
                 // Paid installments retain all their original financial details.

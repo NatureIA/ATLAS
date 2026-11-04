@@ -69,6 +69,11 @@
         <input asp-for="FirstInstallmentDate" type="date" required />
         <small class="field-help">As parcelas não pagas serão distribuídas mensalmente a partir desta data.</small>
       </div>
+      <div class="field">
+        <label asp-for="FirstDueDate">Vencimento da primeira parcela (opcional)</label>
+        <input asp-for="FirstDueDate" type="date" />
+        <small class="field-help">Os vencimentos das demais parcelas seguem mensalmente. Parcelas já pagas não são alteradas.</small>
+      </div>
       <div class="field full">
         <label asp-for="Notes">Observações</label>
         <textarea asp-for="Notes" rows="3" maxlength="1000"></textarea>

@@ -76,9 +76,9 @@
       </div>
     </div>
     <div class="atlas-cashflow-grid">
-      <div><small>Entradas previstas</small><strong id="atlasCashIn">@Model.MonthlyForecast.Take(6).Sum(x=>x.Incoming).ToString("C")</strong></div>
-      <div><small>Saídas previstas</small><strong id="atlasCashOut">@Model.MonthlyForecast.Take(6).Sum(x=>x.Outgoing).ToString("C")</strong></div>
-      <div><small>Resultado previsto</small><strong id="atlasCashNet">@Model.MonthlyForecast.Take(6).Sum(x=>x.Result).ToString("C")</strong></div>
+      <div><small>Entradas previstas</small><strong id="atlasCashIn">@Model.MonthlyForecast.Take(6).Sum(x=>x.Incoming).ToString("C", CultureInfo.GetCultureInfo("pt-BR"))</strong></div>
+      <div><small>Saídas previstas</small><strong id="atlasCashOut">@Model.MonthlyForecast.Take(6).Sum(x=>x.Outgoing).ToString("C", CultureInfo.GetCultureInfo("pt-BR"))</strong></div>
+      <div><small>Resultado previsto</small><strong id="atlasCashNet">@Model.MonthlyForecast.Take(6).Sum(x=>x.Result).ToString("C", CultureInfo.GetCultureInfo("pt-BR"))</strong></div>
     </div>
     <div class="atlas-month-forecast-legend"><span><i class="forecast-income-swatch"></i> Entradas</span><span><i class="forecast-expense-swatch"></i> Saídas</span></div>
     <div class="atlas-month-forecast-chart" role="group" aria-label="Entradas e saídas mensais previstas">
@@ -86,7 +86,7 @@
         <button type="button" class="atlas-month-forecast-column" data-forecast-index="@point.Index" data-forecast-in="@point.Incoming.ToString(CultureInfo.InvariantCulture)" data-forecast-out="@point.Outgoing.ToString(CultureInfo.InvariantCulture)" aria-expanded="false" aria-controls="forecastDetails-@point.Index" hidden="@(point.Index>=6)">
           <span class="atlas-month-forecast-bars" aria-hidden="true"><span class="atlas-month-forecast-bar forecast-income-bar"></span><span class="atlas-month-forecast-bar forecast-expense-bar"></span></span>
           <span class="atlas-month-forecast-month">@point.Label</span>
-          <span class="atlas-month-forecast-result">@point.Result.ToString("C")</span>
+          <span class="atlas-month-forecast-result">Saldo: @point.Result.ToString("C", CultureInfo.GetCultureInfo("pt-BR"))</span>
         </button>
       }
     </div>
@@ -94,7 +94,7 @@
       <p class="atlas-overview-footnote">Selecione um mês do gráfico para consultar os lançamentos previstos.</p>
       @foreach(var point in Model.MonthlyForecast){
         <div class="atlas-month-forecast-detail" id="forecastDetails-@point.Index" data-forecast-detail="@point.Index" hidden>
-          <div class="atlas-month-forecast-detail-title"><strong>@point.Label — Resultado: @point.Result.ToString("C")</strong><span>@point.Entries.Count lançamento(s)</span></div>
+          <div class="atlas-month-forecast-detail-title"><strong>@point.Label — Resultado: @point.Result.ToString("C", CultureInfo.GetCultureInfo("pt-BR"))</strong><span>@point.Entries.Count lançamento(s)</span></div>
           @if(point.Entries.Count==0){
             <p class="atlas-overview-footnote">Nenhum recebimento ou vencimento previsto para este mês.</p>
           } else {
@@ -102,7 +102,7 @@
               @foreach(var entry in point.Entries){
                 <a asp-controller="@(entry.IsRevenue?"Revenue":"Expenses")" asp-action="Edit" asp-route-id="@entry.Id">
                   <span><strong>@entry.Name</strong><small>@entry.ExpectedDate.ToString("dd/MM/yyyy") · @(entry.IsRevenue?"A receber":"A pagar")</small></span>
-                  <b class="@(entry.IsRevenue?"amount-positive":"amount-negative")">@(entry.IsRevenue?"+":"−")@entry.Amount.ToString("C")</b>
+                  <b class="@(entry.IsRevenue?"amount-positive":"amount-negative")">@(entry.IsRevenue?"+":"−")@entry.Amount.ToString("C", CultureInfo.GetCultureInfo("pt-BR"))</b>
                 </a>
               }
             </div>

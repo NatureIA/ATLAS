@@ -30,9 +30,12 @@ public sealed class PushController(FinanceDbContext db,CurrentUser current,
             db.PushDevices.Add(new PushDeviceSubscription{UserId=current.Id,EndpointHash=hash,
                 Endpoint=input.Endpoint,P256dh=input.P256dh,Auth=input.Auth,Active=true});
         } else {
+            // Re-opening the app must not reset the daily send limit.
+            if(row.UserId!=current.Id || !row.Active) {
+                row.LastNotifiedDay=null;row.LastNotifiedUtc=null;
+            }
             row.UserId=current.Id;row.Endpoint=input.Endpoint;row.P256dh=input.P256dh;
             row.Auth=input.Auth;row.Active=true;
-            row.LastNotifiedDay=null;row.LastNotifiedUtc=null;
         }
         await db.SaveChangesAsync(ct);
         return Ok(new{enabled=true});

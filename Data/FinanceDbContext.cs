@@ -34,6 +34,7 @@ public sealed class FinanceDbContext(DbContextOptions<FinanceDbContext> options)
         r.Property(x=>x.RevenueItemName).HasMaxLength(160); r.Property(x=>x.PaymentMethod).HasMaxLength(40);
         r.Property(x=>x.ReferenceName).HasMaxLength(160); r.Property(x=>x.Notes).HasMaxLength(1000);
         r.Property(x=>x.Amount).HasPrecision(18,2); r.Property(x=>x.Date).HasColumnType("date");
+        r.Property(x=>x.ExpectedReceiptDate).HasColumnType("date"); r.Property(x=>x.ReceivedDate).HasColumnType("date");
         r.Property(x=>x.RecurringOccurrenceKey).HasMaxLength(7);
         r.HasIndex(x=>new{x.UserId,x.Date});
         r.HasIndex(x=>new{x.RecurringSeriesId,x.RecurringOccurrenceKey}).IsUnique().HasFilter("[RecurringSeriesId] IS NOT NULL");
@@ -49,6 +50,7 @@ public sealed class FinanceDbContext(DbContextOptions<FinanceDbContext> options)
         rs.Property(x=>x.RevenueItemName).HasMaxLength(160); rs.Property(x=>x.PaymentMethod).HasMaxLength(40);
         rs.Property(x=>x.ReferenceName).HasMaxLength(160); rs.Property(x=>x.Notes).HasMaxLength(1000);
         rs.Property(x=>x.StartDate).HasColumnType("date"); rs.Property(x=>x.EndDate).HasColumnType("date");
+        rs.Property(x=>x.ReceiptDay).HasColumnType("int"); rs.Property(x=>x.ReceiptMonthOffset).HasColumnType("int");
         rs.Property(x=>x.Amount).HasPrecision(18,2); rs.HasIndex(x=>new{x.UserId,x.Active});
         var es=b.Entity<RecurringExpenseSeries>(); es.ToTable("AtlasFinRecurringExpenseSeries"); es.HasKey(x=>x.Id);
         es.Property(x=>x.Description).HasMaxLength(250); es.Property(x=>x.Category).HasMaxLength(100);

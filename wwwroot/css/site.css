@@ -236,3 +236,18 @@
 .revenue-receipt-summary-card small{font-size:11px;color:#6e7a72}
 .revenue-receipt-summary-card strong{font-size:22px;letter-spacing:-.035em}
 @media(max-width:650px){.revenue-due-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.revenue-receipt-summary{grid-template-columns:1fr}.revenue-receipt-summary-card strong{font-size:19px}}
+
+
+/* Personal 30-day cashflow projection, separate from competence totals. */
+.revenue-cashflow-outlook{margin:0 0 23px}
+.revenue-cashflow-title{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;margin:0 0 12px}
+.revenue-cashflow-title h3{font-size:16px;margin:0;letter-spacing:-.03em}
+.revenue-cashflow-title small{font-size:10px;color:#78847b}
+.revenue-cashflow-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:11px}
+.revenue-cashflow-stat{display:flex;flex-direction:column;gap:8px;background:#fff;border:1px solid #e1e5df;padding:16px;border-radius:13px;min-width:0}
+.revenue-cashflow-stat small{font-size:10px;color:#68766d}
+.revenue-cashflow-stat strong{font-size:18px;letter-spacing:-.04em;overflow-wrap:anywhere}
+.revenue-cashflow-stat span{font-size:10px;color:#68766d}
+.revenue-cashflow-note{font-size:10px;color:#7b847e;margin:10px 0 0}
+@media(max-width:850px){.revenue-cashflow-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:400px){.revenue-cashflow-stat{padding:12px}.revenue-cashflow-stat strong{font-size:15px}}

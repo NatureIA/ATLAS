@@ -5,7 +5,7 @@ using Atlas.Domain;
 using Microsoft.EntityFrameworkCore;
 
 namespace Atlas.Services;
-public record RevenueSnapshot(string RevenueItemName,decimal Amount,string PaymentMethod,string? ReferenceName,string? Notes);
+public record RevenueSnapshot(string RevenueItemName,decimal Amount,string PaymentMethod,string? ReferenceName,string? Notes,int? ReceiptDay = null,int ReceiptMonthOffset = 0,bool FutureReceived = true);
 public record ExpenseSnapshot(string Description,string Category,string ExpenseType,decimal Amount,string PaymentMethod,string? Notes,int? DueDay = null,int DueMonthOffset = 0);
 public sealed class RecurringService(FinanceDbContext db,AuditService audit) {
     public static DateTime Month(DateTime date) => new(date.Year,date.Month,1);
@@ -59,6 +59,8 @@ public sealed class RecurringService(FinanceDbContext db,AuditService audit) {
                     JsonSerializer.Deserialize<RevenueSnapshot>(rule.SnapshotJson)!;
                 db.Revenues.Add(new RevenueEntry {UserId=userId,RevenueItemName=data.RevenueItemName,Amount=data.Amount,
                     PaymentMethod=data.PaymentMethod,ReferenceName=data.ReferenceName,Notes=data.Notes,Date=day,
+                    ExpectedReceiptDate=data.ReceiptDay is int receiptDay && receiptDay>=1 && receiptDay<=31 ? RecurringDueDate(m,receiptDay,data.ReceiptMonthOffset) : null,
+                    Received=data.FutureReceived,ReceivedDate=null,
                     RecurringSeriesId=s.Id,RecurringOccurrenceKey=key});
             }
         }

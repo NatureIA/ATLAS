@@ -16,6 +16,9 @@ public class RevenueEntry {
     public decimal Amount { get; set; }
     public string PaymentMethod { get; set; } = "Pix";
     public DateTime Date { get; set; }
+    public DateTime? ExpectedReceiptDate { get; set; }
+    public DateTime? ReceivedDate { get; set; }
+    public bool Received { get; set; } = true;
     public string? ReferenceName { get; set; }
     public string? Notes { get; set; }
     public Guid? RecurringSeriesId { get; set; }
@@ -32,6 +35,9 @@ public class RecurringRevenueSeries {
     public string? Notes { get; set; }
     public DateTime StartDate { get; set; }
     public DateTime? EndDate { get; set; }
+    public int? ReceiptDay { get; set; }
+    public int ReceiptMonthOffset { get; set; }
+    public bool FutureReceived { get; set; } = true;
     public bool Active { get; set; } = true;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;

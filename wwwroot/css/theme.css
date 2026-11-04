@@ -193,3 +193,23 @@ html[data-atlas-theme="dark"] .dashboard-chart-empty{color:#a7b9d7}
 .atlas-push-toggle[disabled]{cursor:wait;opacity:.65}
 .atlas-push-status{display:block;padding:7px 10px 0;font-size:10px;line-height:1.5;color:#e0dbff}
 html[data-atlas-theme="dark"] .atlas-push-status{color:#a7b9d7}
+
+/* Consentimento contextual: convite automático e permissão nativa após toque. */
+.atlas-push-invite[hidden]{display:none!important}
+.atlas-push-invite{position:fixed;inset:0;z-index:100;display:grid;place-items:center;padding:20px;background:#071023ad;backdrop-filter:blur(5px)}
+.atlas-push-invite-panel{width:min(100%,440px);padding:30px;border-radius:20px;background:#fff;color:#1e2432;box-shadow:0 28px 80px #05071a66;border:1px solid #dce2f1}
+.atlas-push-invite-symbol{display:grid;place-items:center;width:44px;height:44px;border-radius:12px;background:#1558c9;color:#fff;font-weight:800;font-size:24px;margin-bottom:22px}
+.atlas-push-invite-panel h2{font-size:23px;letter-spacing:-.04em;margin:0 0 13px;color:#181d2a}
+.atlas-push-invite-panel p{font-size:12.5px;line-height:1.7;color:#5f6d83;margin:0 0 20px}
+.atlas-push-invite-feedback{min-height:1em;color:#1558c9!important;margin-bottom:10px!important}
+.atlas-push-invite-actions{display:flex;flex-wrap:wrap;gap:10px}
+.atlas-push-invite-actions .btn{flex:1;min-width:140px}
+.atlas-push-invite-actions .btn.dark{background:#1558c9;color:#fff}
+.atlas-push-invite-actions .btn.dark:disabled{opacity:.6;cursor:wait}
+.atlas-push-invite-open{overflow:hidden}
+html[data-atlas-theme="dark"] .atlas-push-invite-panel{background:#0e1423;color:#f4f7ff;border-color:#2c4169}
+html[data-atlas-theme="dark"] .atlas-push-invite-panel h2{color:#f4f7ff}
+html[data-atlas-theme="dark"] .atlas-push-invite-panel p{color:#b0bfdb}
+html[data-atlas-theme="dark"] .atlas-push-invite-feedback{color:#d4ff24!important}
+html[data-atlas-theme="dark"] .atlas-push-invite-actions .btn.dark{background:#d4ff24;color:#030407}
+@media(max-width:480px){.atlas-push-invite-panel{padding:24px}.atlas-push-invite-actions{flex-direction:column}.atlas-push-invite-actions .btn{width:100%}}

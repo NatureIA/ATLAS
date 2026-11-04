@@ -46,14 +46,6 @@
       <a class="@(path.StartsWith("/reports")?"selected":"")" asp-controller="Reports" asp-action="Index"><span class="nav-icon">▥</span> Relatórios</a>
     </nav>
     <div class="sidebar-spacer"></div>
-    <div class="atlas-push-settings" id="atlasPushSettings">
-      @Html.AntiForgeryToken()
-      <button id="atlasPushToggle" class="atlas-theme-toggle atlas-push-toggle" type="button" hidden aria-label="Ativar notificações financeiras">
-        <span class="theme-toggle-icon" aria-hidden="true">♧</span>
-        <span class="theme-toggle-text">Ativar notificações</span>
-      </button>
-      <small id="atlasPushStatus" class="atlas-push-status" role="status"></small>
-    </div>
     <button id="atlasThemeToggle" class="atlas-theme-toggle" type="button" aria-pressed="false" aria-label="Ativar tema escuro">
       <span class="theme-toggle-icon" aria-hidden="true">☾</span>
       <span class="theme-toggle-text">Tema escuro</span>
@@ -73,6 +65,19 @@
         </div>
       </div>
     </header>
+    <section class="atlas-push-invite" id="atlasPushInvite" role="dialog" aria-modal="true" aria-labelledby="atlasPushInviteTitle" hidden>
+      <div class="atlas-push-invite-panel">
+        @Html.AntiForgeryToken()
+        <div class="atlas-push-invite-symbol" aria-hidden="true">A</div>
+        <h2 id="atlasPushInviteTitle">Receber alertas financeiros?</h2>
+        <p>O ATLAS pode avisar sobre despesas pendentes mesmo quando o aplicativo estiver fechado. Você receberá, no máximo, um resumo por dia.</p>
+        <p class="atlas-push-invite-feedback" id="atlasPushInviteFeedback" role="status"></p>
+        <div class="atlas-push-invite-actions">
+          <button type="button" id="atlasPushAccept" class="btn dark">Ativar notificações</button>
+          <button type="button" id="atlasPushLater" class="btn ghost">Agora não</button>
+        </div>
+      </div>
+    </section>
     <main class="content">
       @if(TempData["Success"] is string success){<div role="status" class="toast success">@success</div>}
       @if(TempData["Error"] is string error){<div role="alert" class="toast error">@error</div>}

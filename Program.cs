@@ -24,6 +24,7 @@ builder.Services.AddScoped<PasswordService>();
 builder.Services.AddScoped<AuditService>();
 builder.Services.AddScoped<RecurringService>();
 builder.Services.AddScoped<FinancialService>();
+builder.Services.AddScoped<PushReminderService>();
 builder.Services.AddControllersWithViews(options => options.Filters.Add(new Microsoft.AspNetCore.Mvc.AutoValidateAntiforgeryTokenAttribute()));
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(o => {

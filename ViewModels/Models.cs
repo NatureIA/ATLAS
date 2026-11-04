@@ -105,8 +105,20 @@ public class ExpenseListVm {
     public HashSet<Guid> ActiveSeries {get;set;}=[];
 }
 public record NamedAmount(string Name,decimal Amount);
-public record MonthlyPoint(int Year,int Month,string Label,decimal Income,decimal Expense,decimal Result);
+public record MonthlyPoint(int Year,int Month,string Label,decimal Income,decimal Expense,decimal Result,decimal Received=0m);
+public record FinanceActivityVm(long Id,bool IsRevenue,string Name,DateTime Date,decimal Amount,string Status);
+public record CashflowDayVm(int Day,decimal Incoming,decimal Outgoing,decimal Net);
+public record FinancialAlertVm(string Key,string Label,int Count,decimal Amount,string Url);
 public class DashboardVm {
+    public bool FullYear {get;set;}
+    public string PeriodLabel {get;set;}="";
+    public DateTime Today {get;set;}
+    public List<FinancialAlertVm> Alerts {get;set;}=[];
+    public List<CashflowDayVm> CashflowDays {get;set;}=[];
+    public List<FinanceActivityVm> Activity {get;set;}=[];
+    public int ForecastDays {get;set;}=30;
+    public decimal ReceivedInPeriod {get;set;}
+    public decimal ExpensesPaidInPeriod {get;set;}
     public int Year {get;set;}
     public int Month {get;set;}
     public decimal Revenue {get;set;}

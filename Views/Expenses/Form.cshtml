@@ -21,7 +21,10 @@
 }
 <div class="field full"><label asp-for="Notes">Observações</label><textarea asp-for="Notes" rows="3" maxlength="1000" placeholder="Opcional"></textarea></div>
 </div><div class="form-divider"></div>
-@if(!edit){<label class="toggle-row"><input asp-for="IsRecurring" id="isRecurring" type="checkbox" /><span><strong>Despesa recorrente mensal</strong><small>Ocorrências mensais até você encerrar a recorrência.</small></span></label>}
+@if(!edit){
+<label class="toggle-row"><input asp-for="IsPreviousMonth" type="checkbox" /><span><strong>Referente ao mês passado?</strong><small>Sim: antecipa a data inicial da despesa em um mês, mantendo as regras de pagamento, parcelas e recorrência. Não: mantém o comportamento atual.</small></span></label>
+<label class="toggle-row"><input asp-for="IsRecurring" id="isRecurring" type="checkbox" /><span><strong>Despesa recorrente mensal</strong><small>Ocorrências mensais até você encerrar a recorrência.</small></span></label>
+}
 <label class="toggle-row" id="paidRow"><input asp-for="Paid" id="isPaid" type="checkbox" /><span><strong>Já está paga</strong><small>O pagamento registrado influencia as métricas de realização.</small></span></label>
 @if(edit&&Model.ExistingRecurring){<div class="field full"><label for="recurringScopeExpense">Aplicar alterações</label><select id="recurringScopeExpense" name="scope" required><option value="single">Somente neste mês</option><option value="future">Neste mês e nos seguintes</option></select><small class="field-help">Os meses anteriores e o status de pagamento de outros meses permanecem inalterados.</small></div>}
 <div class="form-actions"><a class="btn ghost" asp-action="Index">Cancelar</a><button class="btn dark">@(edit?"Salvar alterações":"Registrar despesa")</button></div>

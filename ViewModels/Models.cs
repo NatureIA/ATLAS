@@ -33,6 +33,7 @@ public class ExpenseInput {
     [Required] public string PaymentMethod {get;set;}="Pix";
     public bool Paid {get;set;}
     public bool IsRecurring {get;set;}
+    public bool IsPreviousMonth {get;set;}
     [Range(1,120)] public int Installments {get;set;}=1;
     [DataType(DataType.Date)] public DateTime? FirstBillDate {get;set;}
     [MaxLength(1000)] public string? Notes {get;set;}

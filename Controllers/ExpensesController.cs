@@ -41,11 +41,16 @@ public class ExpensesController(FinanceDbContext db,CurrentUser current,AuditSer
         if(!ModelState.IsValid){await Options(input);return View("Form",input);}
         var category=input.Category=="__new__"?input.NewCategory!.Trim():input.Category;
         var today=DateTime.Today;
+        // Only the initial date is shifted; existing payment, recurrence and installment rules stay intact.
+        var effectiveToday=input.IsPreviousMonth?today.AddMonths(-1):today;
+        DateTime InitialBillDate()=>input.IsPreviousMonth
+            ?input.FirstBillDate!.Value.Date.AddMonths(-1)
+            :input.FirstBillDate!.Value.Date;
         await using var tx=await db.Database.BeginTransactionAsync();
         var isInstallment=!input.IsRecurring&&(input.PaymentMethod=="Crédito"||input.PaymentMethod=="Boleto");
         if(input.IsRecurring){
             var start=input.PaymentMethod switch {
-                "Crédito"=>today.AddMonths(1),"Boleto"=>input.FirstBillDate!.Value.Date,_=>today};
+                "Crédito"=>effectiveToday.AddMonths(1),"Boleto"=>InitialBillDate(),_=>effectiveToday};
             var series=new RecurringExpenseSeries{UserId=current.Id,Description=input.Description.Trim(),Category=category,
                 ExpenseType=input.ExpenseType,Amount=input.Amount,PaymentMethod=input.PaymentMethod,
                 StartDate=start,Notes=input.Notes};
@@ -57,7 +62,7 @@ public class ExpensesController(FinanceDbContext db,CurrentUser current,AuditSer
             if(input.PaymentMethod is not ("Crédito" or "Boleto"))db.Expenses.Local.Last().Paid=input.Paid;
             audit.Add("CREATE","RecurringExpenseSeries",series.Id,new{input.Amount,start,category});
         } else if(isInstallment){
-            var group=Guid.NewGuid();var first=input.PaymentMethod=="Crédito"?today.AddMonths(1):input.FirstBillDate!.Value.Date;
+            var group=Guid.NewGuid();var first=input.PaymentMethod=="Crédito"?effectiveToday.AddMonths(1):InitialBillDate();
             for(var i=0;i<input.Installments;i++){
                 var date=RecurringService.OccurrenceDate(first,new DateTime(first.Year,first.Month,1).AddMonths(i));
                 var entry=New(input,category,date,false,null,null);
@@ -66,7 +71,7 @@ public class ExpensesController(FinanceDbContext db,CurrentUser current,AuditSer
             }
             audit.Add("CREATE","ExpenseInstallments",group,new{input.Amount,input.Installments,first,category});
         } else {
-            var entry=New(input,category,today,input.Paid,null,null);db.Expenses.Add(entry);
+            var entry=New(input,category,effectiveToday,input.Paid,null,null);db.Expenses.Add(entry);
             audit.Add("CREATE","ExpenseEntry","new",new{input.Amount,category});
         }
         await db.SaveChangesAsync();await tx.CommitAsync();TempData["Success"]="Despesa registrada.";

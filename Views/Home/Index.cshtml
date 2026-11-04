@@ -27,6 +27,16 @@
  <a asp-controller="Revenue" asp-action="Index" asp-route-year="@Model.Year" asp-route-month="@Model.Month" asp-route-group="received" class="revenue-receipt-summary-card"><small>Recebido na competência</small><strong>@Model.ReceivedRevenue.ToString("C")</strong></a>
  <a asp-controller="Revenue" asp-action="Index" asp-route-year="@Model.Year" asp-route-month="@Model.Month" asp-route-group="pending" class="revenue-receipt-summary-card"><small>A receber na competência</small><strong>@Model.PendingRevenue.ToString("C")</strong></a>
 </section>
+<section class="revenue-cashflow-outlook" aria-label="Projeção de fluxo de caixa">
+  <div class="revenue-cashflow-title"><h3>Previsão de fluxo de caixa</h3><small>Próximos 30 dias · valores com data informada</small></div>
+  <div class="revenue-cashflow-grid">
+    <div class="revenue-cashflow-stat"><small>Entradas previstas</small><strong>@Model.ExpectedReceipts30Days.ToString("C")</strong></div>
+    <div class="revenue-cashflow-stat"><small>Saídas previstas</small><strong>@Model.DueExpenses30Days.ToString("C")</strong></div>
+    <div class="revenue-cashflow-stat"><small>Diferença prevista</small><strong>@Model.ExpectedCashflow30Days.ToString("C")</strong></div>
+    <div class="revenue-cashflow-stat"><small>Recebimentos em atraso</small><strong>@Model.OverdueReceipts.ToString("C")</strong><span>@Model.OverdueReceiptsCount pendente(s)</span></div>
+  </div>
+  <p class="revenue-cashflow-note">Projeção de compromissos cadastrados, não saldo bancário. Não inclui lançamentos sem data prevista.</p>
+</section>
 <div class="content-grid main-split">
  <section class="card"><div class="card-title"><div><div class="eyebrow">ÚLTIMOS 6 MESES</div><h3>Evolução financeira</h3></div><span class="card-meta">Comparativo mensal</span></div>
    <partial name="_Chart" model="Model.History" /></section>

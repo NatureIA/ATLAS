@@ -23,6 +23,10 @@
  <div><small>Falta para a meta</small><strong>@Model.Remaining.ToString("C")</strong></div>
  <div><small>Necessário por dia</small><strong>@Model.DailyNeeded.ToString("C")</strong></div>
 </div>
+<section class="revenue-receipt-summary" aria-label="Situação dos recebimentos">
+ <a asp-controller="Revenue" asp-action="Index" asp-route-year="@Model.Year" asp-route-month="@Model.Month" asp-route-group="received" class="revenue-receipt-summary-card"><small>Recebido na competência</small><strong>@Model.ReceivedRevenue.ToString("C")</strong></a>
+ <a asp-controller="Revenue" asp-action="Index" asp-route-year="@Model.Year" asp-route-month="@Model.Month" asp-route-group="pending" class="revenue-receipt-summary-card"><small>A receber na competência</small><strong>@Model.PendingRevenue.ToString("C")</strong></a>
+</section>
 <div class="content-grid main-split">
  <section class="card"><div class="card-title"><div><div class="eyebrow">ÚLTIMOS 6 MESES</div><h3>Evolução financeira</h3></div><span class="card-meta">Comparativo mensal</span></div>
    <partial name="_Chart" model="Model.History" /></section>

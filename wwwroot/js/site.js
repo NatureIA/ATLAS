@@ -28,6 +28,7 @@
       node,
       revenue:Number(node.dataset.revenue)||0,
       expense:Number(node.dataset.expense)||0,
+      received:Number(node.dataset.received)||0,
       result:Number(node.dataset.result)||0
     }));
     const currency=new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'});
@@ -50,7 +51,7 @@
       dashboardChart.style.setProperty('--dashboard-positive-height',positiveHeight+'px');
       dashboardChart.style.setProperty('--dashboard-negative-height',negativeHeight+'px');
       for(const month of months){
-        const data={revenue:month.revenue,expense:month.expense,result:month.result};
+        const data={revenue:month.revenue,received:month.received,expense:month.expense,result:month.result};
         month.node.querySelectorAll('.dashboard-chart-slot').forEach(slot=>{
           const bar=slot.querySelector('.dashboard-chart-bar');
           if(!bar)return;
@@ -63,7 +64,7 @@
           const limit=negative?negativeHeight:positiveHeight;
           bar.hidden=value===0;
           bar.style.height=(value>0 && maximum>0 ? Math.max(2,value/maximum*limit) : 0)+'px';
-          bar.title=(key==='revenue'?'Faturamento':key==='expense'?'Despesas':'Resultado')+': '+currency.format(data[key]);
+          bar.title=(key==='revenue'?'Faturamento':key==='received'?'Recebido':key==='expense'?'Despesas':'Resultado')+': '+currency.format(data[key]);
           bar.setAttribute('role','img');
           bar.setAttribute('aria-label',month.node.dataset.month+' — '+bar.title);
         });
@@ -73,6 +74,70 @@
     }
     checkboxes.forEach(input=>input.addEventListener('change',drawDashboard));
     drawDashboard();
+  }
+  // Interactive 7/15/30/90-day cashflow: actual dated commitments, never bank balance.
+  const cashflow=document.querySelector('#atlasCashflowChart');
+  if(cashflow){
+    const svg=cashflow.querySelector('#atlasCashflowSvg');
+    const points=[...cashflow.querySelectorAll('[data-day]')].map(node=>({
+      day:Number(node.dataset.day),incoming:Number(node.dataset.in)||0,
+      outgoing:Number(node.dataset.out)||0,net:Number(node.dataset.net)||0
+    }));
+    const buttons=[...document.querySelectorAll('.atlas-horizon [data-horizon]')];
+    const currency=new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'});
+    const compact=new Intl.NumberFormat('pt-BR',{notation:'compact',maximumFractionDigits:1});
+    const NS='http://www.w3.org/2000/svg';
+    const put=(parent,tag,attributes,textValue)=>{
+      const node=document.createElementNS(NS,tag);
+      Object.entries(attributes).forEach(([key,value])=>node.setAttribute(key,String(value)));
+      if(textValue!==undefined)node.textContent=String(textValue);
+      parent.appendChild(node);
+      return node;
+    };
+    const setAmount=(id,value)=>{
+      const node=document.getElementById(id);
+      if(node)node.textContent=currency.format(value);
+    };
+    const draw=(days)=>{
+      buttons.forEach(b=>b.setAttribute('aria-pressed',String(Number(b.dataset.horizon)===days)));
+      const data=points.filter(p=>p.day<=days);
+      if(!data.length)return;
+      setAmount('atlasCashIn',data.reduce((s,p)=>s+p.incoming,0));
+      setAmount('atlasCashOut',data.reduce((s,p)=>s+p.outgoing,0));
+      setAmount('atlasCashNet',data[data.length-1].net);
+      const dark=document.documentElement.getAttribute('data-atlas-theme')==='dark';
+      const stroke=dark?'#d4ff24':'#6350e8';
+      const grid=dark?'#364767':'#e4e9e5';
+      const label=dark?'#aec1dc':'#758278';
+      const W=960,L=76,R=25,T=19,B=199;
+      const values=data.map(p=>p.net).concat([0]);
+      const rawMin=Math.min(...values),rawMax=Math.max(...values);
+      const pad=Math.max(1,(rawMax-rawMin)*0.15);
+      const min=rawMin-pad,max=rawMax+pad;
+      const x=day=>L+(W-L-R)*day/days;
+      const y=v=>B-(v-min)/(max-min)*(B-T);
+      svg.replaceChildren();
+      for(let i=0;i<=4;i++){
+        const value=min+(max-min)*i/4,yy=y(value);
+        put(svg,'line',{x1:L,y1:yy,x2:W-R,y2:yy,stroke:grid,'stroke-dasharray':'4 6'});
+        put(svg,'text',{x:L-9,y:yy+4,'text-anchor':'end',fill:label,'font-size':11},compact.format(value));
+      }
+      put(svg,'line',{x1:L,y1:y(0),x2:W-R,y2:y(0),stroke:label,'stroke-width':1});
+      const path=data.map((p,i)=>(i?'L ':'M ')+x(p.day).toFixed(2)+' '+y(p.net).toFixed(2)).join(' ');
+      const fillPath=path+' L '+x(days).toFixed(2)+' '+y(0).toFixed(2)+' L '+x(0).toFixed(2)+' '+y(0).toFixed(2)+' Z';
+      put(svg,'path',{d:fillPath,fill:stroke,'fill-opacity':'0.09'});
+      put(svg,'path',{d:path,fill:'none',stroke,'stroke-width':3,'stroke-linecap':'round','stroke-linejoin':'round'});
+      for(const d of [0,Math.round(days/4),Math.round(days/2),Math.round(days*3/4),days]){
+        put(svg,'text',{x:x(d),y:226,'text-anchor':'middle',fill:label,'font-size':12},d===0?'Hoje':d+'d');
+      }
+      const last=data[data.length-1];
+      put(svg,'circle',{cx:x(last.day),cy:y(last.net),r:4,fill:stroke});
+      svg.setAttribute('aria-label','Diferença acumulada prevista em '+days+' dias: '+currency.format(last.net));
+    };
+    let active=30;
+    buttons.forEach(btn=>btn.addEventListener('click',()=>{active=Number(btn.dataset.horizon);draw(active);}));
+    document.addEventListener('atlas-theme-change',()=>draw(active));
+    draw(active);
   }
   // Reports only: responsive SVG area curves, shared zero baseline and independent flags.
   const performance=document.querySelector('#reportPerformance');

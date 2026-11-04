@@ -247,3 +247,31 @@ html[data-atlas-theme="dark"] .revenue-cashflow-note,
 html[data-atlas-theme="dark"] .revenue-cashflow-stat small,
 html[data-atlas-theme="dark"] .revenue-cashflow-stat span{color:#9fb2d2}
 html[data-atlas-theme="dark"] .revenue-cashflow-stat{background:#10192b;border-color:#2b3c5c;color:#eaf1ff}
+
+
+/* ATLAS personal intelligence overview: dark palette parity. */
+html[data-atlas-theme="dark"] .atlas-overview-section-title,
+html[data-atlas-theme="dark"] .atlas-period-controls strong{color:#f0f5ff}
+html[data-atlas-theme="dark"] .atlas-period-controls a,
+html[data-atlas-theme="dark"] .atlas-overview-metric,
+html[data-atlas-theme="dark"] .atlas-attention-item,
+html[data-atlas-theme="dark"] .atlas-small-link,
+html[data-atlas-theme="dark"] .atlas-cashflow-grid>div,
+html[data-atlas-theme="dark"] .atlas-cashflow-chart,
+html[data-atlas-theme="dark"] .atlas-overview-details{background:#10192b;color:#eaf1ff;border-color:#2b3c5c}
+html[data-atlas-theme="dark"] .atlas-overview-metric-emphasis,
+html[data-atlas-theme="dark"] .atlas-small-link[aria-current="page"]{background:#1c2850;border-color:#5c75bf}
+html[data-atlas-theme="dark"] .atlas-overview-metric small,
+html[data-atlas-theme="dark"] .atlas-attention-item small,
+html[data-atlas-theme="dark"] .atlas-overview-footnote,
+html[data-atlas-theme="dark"] .atlas-overview-section-heading>span,
+html[data-atlas-theme="dark"] .atlas-overview-detail-state,
+html[data-atlas-theme="dark"] .atlas-cashflow-grid small{color:#a7b9d7}
+html[data-atlas-theme="dark"] .atlas-insight-simple{background:#15213c;color:#eaf1ff;border-color:#33486d}
+html[data-atlas-theme="dark"] .atlas-insight-mark{color:#d4ff24}
+html[data-atlas-theme="dark"] .atlas-horizon button{background:#14223a;border-color:#33486d;color:#d7e5ff}
+html[data-atlas-theme="dark"] .atlas-horizon button[aria-pressed="true"]{background:#d4ff24;color:#10192b;border-color:#d4ff24}
+html[data-atlas-theme="dark"] .atlas-overview-extra>div{background:#17253c}
+html[data-atlas-theme="dark"] .atlas-overview-extra small{color:#a7b9d7}
+html[data-atlas-theme="dark"] .atlas-overview .dashboard-chart-filter-received .dashboard-chart-swatch,
+html[data-atlas-theme="dark"] .atlas-overview .dashboard-chart-bar.received{background:#52a7ff}

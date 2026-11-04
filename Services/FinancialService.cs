@@ -29,6 +29,7 @@ public sealed class FinancialService(FinanceDbContext db,RecurringService recurr
         var brasiliaToday=TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow,
             TimeZoneInfo.FindSystemTimeZoneById("America/Sao_Paulo")).Date;
         var forecastEnd=brasiliaToday.AddDays(30);
+        await recurrence.EnsureThroughAsync(userId,forecastEnd);
         var futureReceipts=await db.Revenues.AsNoTracking()
             .Where(x=>x.UserId==userId && !x.Received && x.ExpectedReceiptDate>=brasiliaToday && x.ExpectedReceiptDate<=forecastEnd)
             .SumAsync(x=>x.Amount);

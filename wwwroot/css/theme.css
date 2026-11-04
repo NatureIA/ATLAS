@@ -234,3 +234,8 @@ html[data-atlas-theme="dark"] .expense-filter-chevron{color:#a7b9d7}
 html[data-atlas-theme="dark"] .expense-filter-disclosure[open] .expense-filter-trigger{border-bottom-color:transparent}
 
 html[data-atlas-theme="dark"] .expense-due-period{color:#a7b9d7}
+
+
+html[data-atlas-theme="dark"] .revenue-receipt-summary-card{background:#10192b;border-color:#2b3c5c;color:#eaf1ff}
+html[data-atlas-theme="dark"] .revenue-receipt-summary-card small{color:#a7b9d7}
+html[data-atlas-theme="dark"] .revenue-receipt-summary-card:hover{border-color:#578aff}

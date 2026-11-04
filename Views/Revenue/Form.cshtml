@@ -4,7 +4,7 @@
 <p class="muted">@(edit?"A data original permanece preservada.":"A competência será a do mês atual.")</p></div>
 <a class="btn ghost" asp-action="Index">← Voltar</a></div>
 <div class="card form-card"><form asp-controller="Revenue" asp-action="@(edit?"Update":"Save")" asp-route-id="@Model.Id" method="post" asp-antiforgery="true" class="finance-form">
-<div asp-validation-summary="ModelOnly" class="validation"></div>
+<div asp-validation-summary="All" class="validation"></div>
 <div class="field-grid"><div class="field"><label asp-for="ItemName">Item de receita <b>*</b></label><select asp-for="ItemName" id="itemSelect" required>
 <option value="">Selecione</option>
 @foreach(var item in Model.Items.Where(x=>x.Active||x.Name==Model.ItemName)) {<option value="@item.Name">@item.Name</option>}

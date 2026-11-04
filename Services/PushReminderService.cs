@@ -71,7 +71,7 @@ public sealed class PushReminderService(
             var user=await db.Users.AsNoTracking().FirstOrDefaultAsync(x=>x.Id==userId && x.Ativo,ct);
             if(user==null) continue;
             try {
-                await recurring.EnsureThroughAsync(userId,firstDayNextMonth.AddDays(-1),ct);
+                await recurring.EnsureThroughAsync(userId,today.AddDays(7),ct);
             } catch(Exception e) {
                 logger.LogError(e,"ATLAS push: falha na atualização de recorrência para usuário {UserId}",userId);
                 continue;

@@ -1,7 +1,27 @@
 @model ExpenseListVm
-@{ ViewData["Title"]="Despesas"; }
+@{ ViewData["Title"]="Despesas"; var competenceLabel=new DateTime(Model.Year!.Value,Model.Month!.Value,1).ToString("MMMM yyyy",CultureInfo.GetCultureInfo("pt-BR")); }
 <div class="section-heading"><div><div class="eyebrow">SAÍDAS FINANCEIRAS</div><h2>Despesas</h2><p class="muted">Compromissos, recorrências e parcelas em um só lugar.</p></div><a class="btn dark" asp-action="Create">+ Nova despesa</a></div>
-<form method="get" class="card filter-card"><div class="filter-grid filter-seven">
+<section class="expense-due-section" aria-label="Central de vencimentos">
+  <div class="expense-due-heading">
+    <div><div class="eyebrow">CENTRAL DE VENCIMENTOS</div><h3>Prioridades da competência</h3><p class="muted">Resumo de despesas pendentes em @competenceLabel. Selecione um indicador para filtrar a lista.</p></div>
+    <a class="expense-due-reset" asp-action="Index" asp-route-year="@Model.Year" asp-route-month="@Model.Month">Ver todas da competência</a>
+  </div>
+  <div class="expense-due-grid">
+  @foreach(var bucket in Model.DueBuckets){
+    var active=Model.DueGroup==bucket.Key;
+    var cardUrl=Url.Action("Index","Expenses",new { year=Model.Year,month=Model.Month,
+        search=Model.Search,category=Model.Category,expenseType=Model.ExpenseType,
+        paymentMethod=Model.PaymentMethod,status="pending",dueGroup=active?null:bucket.Key });
+    <a href="@cardUrl" class="expense-due-card @(active?"selected":"")" aria-current="@(active?"true":null)">
+      <span class="expense-due-label">@bucket.Label</span>
+      <strong class="expense-due-count">@bucket.Count</strong>
+      <span class="expense-due-amount">@bucket.Amount.ToString("C")</span>
+      <span class="expense-due-hint">@(active?"Filtro ativo":"Ver despesas") <span aria-hidden="true">↗</span></span>
+    </a>
+  }
+  </div>
+</section>
+<form method="get" class="card filter-card"><input type="hidden" name="dueGroup" value="@Model.DueGroup" /><div class="filter-grid filter-seven">
 <div class="field"><label>Pesquisar</label><input name="search" value="@Model.Search" placeholder="Descrição" /></div>
 <div class="field"><label>Status</label><select name="status"><option value="">Todos</option><option value="paid" selected="@(Model.Status=="paid")">Pago</option><option value="pending" selected="@(Model.Status=="pending")">Pendente</option></select></div>
 <div class="field"><label>Categoria</label><select name="category"><option value="">Todas</option>@foreach(var cat in Model.Categories){<option value="@cat" selected="@(cat==Model.Category)">@cat</option>}</select></div>
@@ -14,10 +34,10 @@
 <option value="">Todos os pagamentos</option>
 @foreach(var method in new[]{"Pix","Dinheiro","Débito","Crédito","Transferência","Boleto"}){<option value="@method" selected="@(Model.PaymentMethod==method)">@method</option>}
 </select></div>
-<div class="field"><label>Ano</label><input name="year" type="number" min="2000" max="2100" value="@Model.Year" placeholder="Todos" /></div>
-<div class="field"><label>Mês</label><select name="month"><option value="">Todos</option>@for(var i=1;i<=12;i++){<option value="@i" selected="@(Model.Month==i)">@CultureInfo.GetCultureInfo("pt-BR").DateTimeFormat.GetMonthName(i)</option>}</select></div>
-</div><div class="filter-actions"><button class="btn dark">Filtrar</button><a class="btn ghost" asp-action="Index">Limpar</a></div></form>
-<section class="card table-card"><div class="card-title"><div><div class="eyebrow">COMPROMISSOS</div><h3>Despesas registradas</h3></div><span class="card-meta">Até 500 registros</span></div>
+<div class="field"><label>Ano da competência</label><input name="year" type="number" min="2000" max="2100" value="@Model.Year" required /></div>
+<div class="field"><label>Mês da competência</label><select name="month" required>@for(var i=1;i<=12;i++){<option value="@i" selected="@(Model.Month==i)">@CultureInfo.GetCultureInfo("pt-BR").DateTimeFormat.GetMonthName(i)</option>}</select></div>
+</div><div class="filter-actions"><button class="btn dark">Filtrar</button><a class="btn ghost" asp-action="Index">Mês atual / Limpar</a></div></form>
+<section class="card table-card"><div class="card-title"><div><div class="eyebrow">COMPROMISSOS</div><h3>Despesas registradas — @competenceLabel</h3></div><span class="card-meta">Até 500 registros</span></div>
 @if(Model.Rows.Count==0){<div class="empty-inline">Nenhuma despesa encontrada para os filtros selecionados.</div>}
 else{<div class="table-scroll"><table><thead><tr><th>Descrição</th><th>Competência</th><th>Vencimento</th><th>Categoria</th><th>Pagamento</th><th>Tipo</th><th>Status</th><th class="align-right">Valor</th><th>Ações</th></tr></thead><tbody>
 @foreach(var row in Model.Rows){<tr><td class="strong-cell">@row.Description

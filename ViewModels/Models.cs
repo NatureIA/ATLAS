@@ -77,7 +77,10 @@ public class RevenueListVm {
     public int? Year {get;set;}
     public int? Month {get;set;}
 }
+public record DueBucketVm(string Key,string Label,int Count,decimal Amount);
 public class ExpenseListVm {
+    public string? DueGroup {get;set;}
+    public List<DueBucketVm> DueBuckets {get;set;}=[];
     public List<ExpenseEntry> Rows {get;set;}=[];
     public string? Search {get;set;}
     public string? Status {get;set;}

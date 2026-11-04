@@ -16,23 +16,62 @@ public class ExpensesController(FinanceDbContext db,CurrentUser current,AuditSer
         var existing=await db.Expenses.AsNoTracking().Where(x=>x.UserId==current.Id).Select(x=>x.Category).Distinct().ToListAsync();
         vm.Categories=DefaultCategories.Concat(existing).Concat(new[]{vm.Category}).Where(x=>!string.IsNullOrWhiteSpace(x)).Distinct().OrderBy(x=>x).ToList();
     }
-    [HttpGet] public async Task<IActionResult> Index(string? search,string? status,string? category,string? expenseType,string? paymentMethod,int? year,int? month){
+    [HttpGet] public async Task<IActionResult> Index(string? search,string? status,string? category,string? expenseType,string? paymentMethod,int? year,int? month,string? dueGroup){
         if(year is < 2000 or > 2100 || month is < 1 or > 12)return BadRequest();
-        if(year.HasValue||month.HasValue)await recurrence.EnsureThroughAsync(current.Id,
-            new DateTime(year??DateTime.Today.Year,month??12,1));
-        var q=db.Expenses.AsNoTracking().Where(x=>x.UserId==current.Id);
-        if(year.HasValue)q=q.Where(x=>x.Date.Year==year);
-        if(month.HasValue)q=q.Where(x=>x.Date.Month==month);
+        if(status is not (null or "" or "paid" or "pending"))return BadRequest();
+        if(dueGroup is not (null or "" or "overdue" or "today" or "next3" or "later" or "undated"))return BadRequest();
+
+        // The accounting competence controls both the initial table and all summary cards.
+        // Do not confuse competence with the actual due date.
+        var brasilia=TimeZoneInfo.FindSystemTimeZoneById("America/Sao_Paulo");
+        var today=TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow,brasilia).Date;
+        var selectedYear=year??today.Year;
+        var selectedMonth=month??today.Month;
+        var first=new DateTime(selectedYear,selectedMonth,1);
+        var next=first.AddMonths(1);
+        await recurrence.EnsureThroughAsync(current.Id,next.AddDays(-1));
+
+        var competence=db.Expenses.AsNoTracking()
+            .Where(x=>x.UserId==current.Id && x.Date>=first && x.Date<next);
+        var pending=await competence.Where(x=>!x.Paid)
+            .Select(x=>new {x.DueDate,x.Amount}).ToListAsync();
+        var threeDays=today.AddDays(3);
+        var buckets=new List<DueBucketVm>();
+        void AddBucket(string key,string label,Func<DateTime?,bool> match){
+            var matches=pending.Where(x=>match(x.DueDate)).ToList();
+            buckets.Add(new DueBucketVm(key,label,matches.Count,matches.Sum(x=>x.Amount)));
+        }
+        AddBucket("overdue","Vencidas",d=>d.HasValue && d.Value.Date<today);
+        AddBucket("today","Vencem hoje",d=>d.HasValue && d.Value.Date==today);
+        AddBucket("next3","Próximos 3 dias",d=>d.HasValue && d.Value.Date>today && d.Value.Date<=threeDays);
+        AddBucket("later","Demais vencimentos",d=>d.HasValue && d.Value.Date>threeDays);
+        AddBucket("undated","Sem vencimento",d=>!d.HasValue);
+
+        var q=competence;
         if(!string.IsNullOrWhiteSpace(search))q=q.Where(x=>x.Description.Contains(search.Trim()));
         if(status=="paid")q=q.Where(x=>x.Paid);
         if(status=="pending")q=q.Where(x=>!x.Paid);
         if(!string.IsNullOrWhiteSpace(category))q=q.Where(x=>x.Category==category);
         if(!string.IsNullOrWhiteSpace(expenseType))q=q.Where(x=>x.ExpenseType==expenseType);
         if(!string.IsNullOrWhiteSpace(paymentMethod))q=q.Where(x=>x.PaymentMethod==paymentMethod);
+        if(!string.IsNullOrWhiteSpace(dueGroup)){
+            q=q.Where(x=>!x.Paid);
+            q=dueGroup switch {
+                "overdue"=>q.Where(x=>x.DueDate!=null && x.DueDate<today),
+                "today"=>q.Where(x=>x.DueDate==today),
+                "next3"=>q.Where(x=>x.DueDate>today && x.DueDate<=threeDays),
+                "later"=>q.Where(x=>x.DueDate>threeDays),
+                "undated"=>q.Where(x=>x.DueDate==null),
+                _=>q
+            };
+        }
         var rows=await q.OrderByDescending(x=>x.Date).ThenByDescending(x=>x.Id).Take(500).ToListAsync();
-        var categories=await db.Expenses.AsNoTracking().Where(x=>x.UserId==current.Id).Select(x=>x.Category).Distinct().OrderBy(x=>x).ToListAsync();
-        var activeSeries=await db.ExpenseSeries.AsNoTracking().Where(x=>x.UserId==current.Id&&x.Active).Select(x=>x.Id).ToListAsync();
-        return View(new ExpenseListVm{Rows=rows,Search=search,Status=status,Category=category,Year=year,Month=month,
+        var categories=await db.Expenses.AsNoTracking().Where(x=>x.UserId==current.Id)
+            .Select(x=>x.Category).Distinct().OrderBy(x=>x).ToListAsync();
+        var activeSeries=await db.ExpenseSeries.AsNoTracking().Where(x=>x.UserId==current.Id&&x.Active)
+            .Select(x=>x.Id).ToListAsync();
+        return View(new ExpenseListVm{Rows=rows,Search=search,Status=status,Category=category,
+            Year=selectedYear,Month=selectedMonth,DueGroup=dueGroup,DueBuckets=buckets,
             Categories=categories,ActiveSeries=activeSeries.ToHashSet(),ExpenseType=expenseType,PaymentMethod=paymentMethod});
     }
     [HttpGet] public async Task<IActionResult> Create(){var vm=new ExpenseInput();await Options(vm);return View("Form",vm);}

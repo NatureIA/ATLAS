@@ -53,10 +53,11 @@ public class ExpensesController(FinanceDbContext db,CurrentUser current,AuditSer
                 "Crédito"=>effectiveToday.AddMonths(1),"Boleto"=>InitialBillDate(),_=>effectiveToday};
             var series=new RecurringExpenseSeries{UserId=current.Id,Description=input.Description.Trim(),Category=category,
                 ExpenseType=input.ExpenseType,Amount=input.Amount,PaymentMethod=input.PaymentMethod,
-                StartDate=start,Notes=input.Notes};
+                StartDate=start,Notes=input.Notes,DueDay=input.DueDate?.Day,
+                DueMonthOffset=input.DueDate.HasValue ? (input.DueDate.Value.Year-start.Year)*12+input.DueDate.Value.Month-start.Month : 0};
             db.ExpenseSeries.Add(series);
             recurrence.Revision(current.Id,series.Id,"expense",start,new ExpenseSnapshot(series.Description,
-                series.Category,series.ExpenseType,series.Amount,series.PaymentMethod,series.Notes));
+                series.Category,series.ExpenseType,series.Amount,series.PaymentMethod,series.Notes,series.DueDay,series.DueMonthOffset));
             db.Expenses.Add(New(input,category,start,false,series.Id,RecurringService.Key(start)));
             // Em pagamento comum respeita a indicação Já paga na ocorrência inicial.
             if(input.PaymentMethod is not ("Crédito" or "Boleto"))db.Expenses.Local.Last().Paid=input.Paid;
@@ -67,6 +68,7 @@ public class ExpensesController(FinanceDbContext db,CurrentUser current,AuditSer
                 var date=RecurringService.OccurrenceDate(first,new DateTime(first.Year,first.Month,1).AddMonths(i));
                 var entry=New(input,category,date,false,null,null);
                 entry.InstallmentGroupId=group;entry.InstallmentNumber=i+1;entry.InstallmentTotal=input.Installments;
+                entry.DueDate=input.DueDate.HasValue?RecurringService.OccurrenceDate(input.DueDate.Value,new DateTime(input.DueDate.Value.Year,input.DueDate.Value.Month,1).AddMonths(i)):null;
                 db.Expenses.Add(entry);
             }
             audit.Add("CREATE","ExpenseInstallments",group,new{input.Amount,input.Installments,first,category});
@@ -82,7 +84,7 @@ public class ExpensesController(FinanceDbContext db,CurrentUser current,AuditSer
         if(x is null)return NotFound();
         if(x.InstallmentGroupId is Guid groupId)return RedirectToAction(nameof(Installments),new{id=groupId});
         var vm=new ExpenseInput{Id=x.Id,Description=x.Description,Category=x.Category,ExpenseType=x.ExpenseType,
-            Amount=x.Amount,PaymentMethod=x.PaymentMethod,Paid=x.Paid,Notes=x.Notes,ExistingRecurring=x.RecurringSeriesId!=null};
+            Amount=x.Amount,PaymentMethod=x.PaymentMethod,Paid=x.Paid,Notes=x.Notes,DueDate=x.DueDate,ExistingRecurring=x.RecurringSeriesId!=null};
         await Options(vm);return View("Form",vm);
     }
     [HttpPost,ValidateAntiForgeryToken] public async Task<IActionResult> Update(long id,ExpenseInput input,string? scope){
@@ -105,8 +107,16 @@ public class ExpensesController(FinanceDbContext db,CurrentUser current,AuditSer
                 audit.Add("UPDATE","RecurringExpenseOccurrence",row.Id,new {seriesId,month=RecurringService.Key(row.Date),scope,input.Amount,cat,input.Paid});
             } else {
                 var future=await db.Expenses.Where(x=>x.UserId==current.Id&&x.RecurringSeriesId==seriesId&&x.Date>=row.Date).ToListAsync();
-                foreach(var entry in future)Apply(entry,input,cat,false);
+                foreach(var entry in future){
+                    Apply(entry,input,cat,false);
+                    entry.DueDate=input.DueDate.HasValue
+                        ?RecurringService.RecurringDueDate(entry.Date,input.DueDate.Value.Day,
+                            (input.DueDate.Value.Year-row.Date.Year)*12+input.DueDate.Value.Month-row.Date.Month)
+                        :null;
+                }
                 row.Paid=input.Paid;
+                series.DueDay=input.DueDate?.Day;
+                series.DueMonthOffset=input.DueDate.HasValue ? (input.DueDate.Value.Year-row.Date.Year)*12+input.DueDate.Value.Month-row.Date.Month : 0;
                 series.Description=input.Description.Trim();series.Category=cat;series.ExpenseType=input.ExpenseType;
                 series.Amount=input.Amount;series.PaymentMethod=input.PaymentMethod;series.Notes=input.Notes;series.UpdatedAt=DateTime.UtcNow;
                 // Later revisions must not restore an older amount when subsequent months are generated.
@@ -114,9 +124,9 @@ public class ExpensesController(FinanceDbContext db,CurrentUser current,AuditSer
                 var later=await db.Revisions.Where(x=>x.UserId==current.Id&&x.SeriesId==seriesId&&x.Kind=="expense"&&x.EffectiveMonth>from).ToListAsync();
                 foreach(var revision in later)
                     recurrence.Revision(current.Id,seriesId,"expense",revision.EffectiveMonth,
-                        new ExpenseSnapshot(input.Description.Trim(),cat,input.ExpenseType,input.Amount,input.PaymentMethod,input.Notes));
+                        new ExpenseSnapshot(input.Description.Trim(),cat,input.ExpenseType,input.Amount,input.PaymentMethod,input.Notes,series.DueDay,series.DueMonthOffset));
                 recurrence.Revision(current.Id,seriesId,"expense",row.Date,new ExpenseSnapshot(series.Description,
-                    cat,input.ExpenseType,input.Amount,input.PaymentMethod,input.Notes));
+                    cat,input.ExpenseType,input.Amount,input.PaymentMethod,input.Notes,series.DueDay));
                 audit.Add("UPDATE","RecurringExpenseSeries",seriesId,new{effective=row.Date,scope,input.Amount,cat,updatedFutureRevisions=later.Count});
             }
         } else {Apply(row,input,cat,true);audit.Add("UPDATE","ExpenseEntry",id,new{input.Amount,cat,input.Paid});}
@@ -136,7 +146,7 @@ public class ExpensesController(FinanceDbContext db,CurrentUser current,AuditSer
             GroupId=id,Description=initial.Description,Category=initial.Category,
             ExpenseType=initial.ExpenseType,Amount=initial.Amount,
             PaymentMethod=initial.PaymentMethod,Notes=initial.Notes,
-            FirstInstallmentDate=first.Date,Installments=rows.Max(x=>x.InstallmentTotal??rows.Count)
+            FirstInstallmentDate=first.Date,FirstDueDate=first.DueDate,Installments=rows.Max(x=>x.InstallmentTotal??rows.Count)
         };
         await PopulateInstallmentOptions(vm,rows);
         return View(vm);
@@ -151,6 +161,8 @@ public class ExpensesController(FinanceDbContext db,CurrentUser current,AuditSer
             ModelState.AddModelError(nameof(input.ExpenseType),"Tipo de despesa inválido.");
         if(input.Category=="__new__"&&string.IsNullOrWhiteSpace(input.NewCategory))
             ModelState.AddModelError(nameof(input.NewCategory),"Informe a nova categoria.");
+        if(input.FirstDueDate.HasValue && input.FirstDueDate.Value.Year is < 2000 or > 2100)
+            ModelState.AddModelError(nameof(input.FirstDueDate),"Informe um vencimento válido.");
         if(input.FirstInstallmentDate.Year is < 2000 or > 2100)
             ModelState.AddModelError(nameof(input.FirstInstallmentDate),"Informe uma data válida.");
 
@@ -205,6 +217,7 @@ public class ExpensesController(FinanceDbContext db,CurrentUser current,AuditSer
                     InstallmentTotal=input.Installments,Description=input.Description.Trim(),
                     Category=category,ExpenseType=input.ExpenseType,Amount=input.Amount,
                     PaymentMethod=input.PaymentMethod,Date=date,Paid=false,Notes=input.Notes,
+                    DueDate=input.FirstDueDate.HasValue?RecurringService.OccurrenceDate(input.FirstDueDate.Value,new DateTime(input.FirstDueDate.Value.Year,input.FirstDueDate.Value.Month,1).AddMonths(number-1)):null,
                     CreatedAt=DateTime.UtcNow
                 });
                 created++;
@@ -218,6 +231,7 @@ public class ExpensesController(FinanceDbContext db,CurrentUser current,AuditSer
                 existing.Amount=input.Amount;
                 existing.PaymentMethod=input.PaymentMethod;
                 existing.Date=date;
+                existing.DueDate=input.FirstDueDate.HasValue?RecurringService.OccurrenceDate(input.FirstDueDate.Value,new DateTime(input.FirstDueDate.Value.Year,input.FirstDueDate.Value.Month,1).AddMonths(number-1)):null;
                 existing.Notes=input.Notes;
             }
         }
@@ -268,17 +282,18 @@ public class ExpensesController(FinanceDbContext db,CurrentUser current,AuditSer
         if(!Methods.Contains(x.PaymentMethod))ModelState.AddModelError(nameof(x.PaymentMethod),"Forma de pagamento inválida.");
         if(x.ExpenseType is not("Fixa" or "Variável"))ModelState.AddModelError(nameof(x.ExpenseType),"Tipo de despesa inválido.");
         if(x.Category=="__new__"&&string.IsNullOrWhiteSpace(x.NewCategory))ModelState.AddModelError(nameof(x.NewCategory),"Informe a nova categoria.");
+        if(x.DueDate.HasValue && (x.DueDate.Value.Year<2000 || x.DueDate.Value.Year>2100))ModelState.AddModelError(nameof(x.DueDate),"Data de vencimento inválida.");
         if(create&&x.PaymentMethod=="Boleto"&&x.FirstBillDate is null)ModelState.AddModelError(nameof(x.FirstBillDate),"Informe a data do primeiro boleto.");
         if(create&&!x.IsRecurring&&(x.PaymentMethod is "Crédito" or "Boleto")&&(x.Installments is < 1 or > 120))
             ModelState.AddModelError(nameof(x.Installments),"Informe entre 1 e 120 parcelas.");
     }
     private ExpenseEntry New(ExpenseInput x,string category,DateTime date,bool paid,Guid? series,string? key) =>
         new(){UserId=current.Id,Description=x.Description.Trim(),Category=category,ExpenseType=x.ExpenseType,
-            Amount=x.Amount,PaymentMethod=x.PaymentMethod,Date=date,DueDate=null,Paid=paid,
+            Amount=x.Amount,PaymentMethod=x.PaymentMethod,Date=date,DueDate=x.DueDate?.Date,Paid=paid,
             Notes=x.Notes,RecurringSeriesId=series,RecurringOccurrenceKey=key};
     private static void Apply(ExpenseEntry e,ExpenseInput x,string category,bool includePaid){
         e.Description=x.Description.Trim();e.Category=category;e.ExpenseType=x.ExpenseType;
-        e.Amount=x.Amount;e.PaymentMethod=x.PaymentMethod;e.Notes=x.Notes;
+        e.Amount=x.Amount;e.PaymentMethod=x.PaymentMethod;e.Notes=x.Notes;e.DueDate=x.DueDate?.Date;
         if(includePaid)e.Paid=x.Paid;
     }
 }

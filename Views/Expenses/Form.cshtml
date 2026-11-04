@@ -19,6 +19,7 @@
 <div class="field conditional hidden" id="installmentsField"><label asp-for="Installments">Quantidade de parcelas</label><input asp-for="Installments" type="number" min="1" max="120" /></div>
 <div class="field conditional hidden" id="billDateField"><label asp-for="FirstBillDate">Data do primeiro boleto</label><input asp-for="FirstBillDate" type="date" /></div>
 }
+<div class="field"><label asp-for="DueDate">Data de vencimento (opcional)</label><input asp-for="DueDate" type="date" /><small class="field-help">Independente da competência financeira. Para parcelas, informe o primeiro vencimento; os demais seguem mensalmente.</small></div>
 <div class="field full"><label asp-for="Notes">Observações</label><textarea asp-for="Notes" rows="3" maxlength="1000" placeholder="Opcional"></textarea></div>
 </div><div class="form-divider"></div>
 @if(!edit){

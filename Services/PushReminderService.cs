@@ -45,8 +45,8 @@ public sealed class PushReminderService(
     {
         if (!IsConfigured) throw new InvalidOperationException("Push não configurado.");
 
-        // GitHub Actions continues checking every ten minutes, including waking the hosting.
-        // Deliver ONLY in one of the four designated Brasília hours (no late catch-up).
+        // GitHub Actions calls only at the four designated Brasilia hours.
+        // Deliver ONLY in the matching local hour (no late catch-up).
         var localNow=TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow,BrasiliaTimeZone);
         var slot=localNow.Hour switch { 8=>8, 12=>12, 15=>15, 18=>18, _=>0 };
         if(slot==0)return 0;
@@ -76,12 +76,37 @@ public sealed class PushReminderService(
                 logger.LogError(e,"ATLAS push: falha na atualização de recorrência para usuário {UserId}",userId);
                 continue;
             }
-            var count=await db.Expenses.AsNoTracking()
-                .CountAsync(x=>x.UserId==userId && !x.Paid && x.Date<firstDayNextMonth,ct);
-            if(count==0) continue;
+            // Recalculate per user at each window. Due dates are independent from
+            // accounting competence; undated entries remain a separate category.
+            var pending=await db.Expenses.AsNoTracking()
+                .Where(x=>x.UserId==userId && !x.Paid &&
+                    (x.DueDate!=null || x.Date<firstDayNextMonth))
+                .Select(x=>new {x.Date,x.DueDate})
+                .ToListAsync(ct);
+            var overdue=pending.Count(x=>x.DueDate.HasValue && x.DueDate.Value.Date<today);
+            var dueToday=pending.Count(x=>x.DueDate.HasValue && x.DueDate.Value.Date==today);
+            var dueTomorrow=pending.Count(x=>x.DueDate.HasValue && x.DueDate.Value.Date==today.AddDays(1));
+            var withinThree=pending.Count(x=>x.DueDate.HasValue && x.DueDate.Value.Date>=today.AddDays(2) && x.DueDate.Value.Date<=today.AddDays(3));
+            var withinSeven=pending.Count(x=>x.DueDate.HasValue && x.DueDate.Value.Date>=today.AddDays(4) && x.DueDate.Value.Date<=today.AddDays(7));
+            var undated=pending.Count(x=>!x.DueDate.HasValue && x.Date<firstDayNextMonth);
+
+            // The four windows are opportunities, not mandatory messages:
+            // 08h: overall summary, including undated competence commitments.
+            // 12h and 15h: only overdue or due today.
+            // 18h: overdue, due today, or due tomorrow.
+            var parts=new List<string>();
+            if(overdue>0)parts.Add($"{overdue} vencida(s)");
+            if(dueToday>0)parts.Add($"{dueToday} vence(m) hoje");
+            if(slot is 8 or 18 && dueTomorrow>0)parts.Add($"{dueTomorrow} vence(m) amanhã");
+            if(slot==8) {
+                if(withinThree>0)parts.Add($"{withinThree} vence(m) em 2–3 dias");
+                if(withinSeven>0)parts.Add($"{withinSeven} vence(m) em 4–7 dias");
+                if(undated>0)parts.Add($"{undated} sem vencimento informado");
+            }
+            if(parts.Count==0)continue;
             var payload=JsonSerializer.Serialize(new {
-                title="ATLAS — Despesas sem baixa",
-                body=count==1?"Você possui 1 despesa pendente de baixa.":$"Você possui {count} despesas pendentes de baixa.",
+                title=overdue>0 || dueToday>0?"ATLAS — Pagamentos precisam de atenção":"ATLAS — Próximos compromissos",
+                body=string.Join("; ",parts)+". Consulte suas despesas.",
                 url="/Expenses?status=pending",
                 tag="atlas-pending-expenses"
             });

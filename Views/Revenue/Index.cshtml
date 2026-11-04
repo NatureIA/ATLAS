@@ -5,7 +5,7 @@
     <div class="expense-due-title"><h3>Recebimentos</h3><span class="expense-due-period">@competenceLabel</span></div>
     <div class="expense-due-actions"><a class="expense-due-reset" asp-action="Index" asp-route-year="@Model.Year" asp-route-month="@Model.Month">Ver todas da competência</a><a class="btn dark" asp-action="Create">+ Nova receita</a></div>
   </div>
-  <div class="revenue-period-shortcuts"><a class="btn ghost" asp-action="Index" asp-route-year="@Model.Year" asp-route-month="0" aria-current="@(Model.Month==0?"page":null)">Visualizar ano inteiro</a><a class="btn ghost" asp-action="Index" asp-route-year="@Model.Year" asp-route-month="@Model.Today.Month" aria-current="@(Model.Month==Model.Today.Month && Model.Year==Model.Today.Year?"page":null)">Mês atual</a></div>
+  <div class="revenue-period-shortcuts"><a class="btn ghost" asp-action="Index" asp-route-year="@Model.Year" asp-route-month="0" aria-current="@(Model.Month==0?"page":null)">Visualizar ano inteiro</a><a class="btn ghost" asp-action="Index" asp-route-year="@Model.Today.Year" asp-route-month="@Model.Today.Month" aria-current="@(Model.Month==Model.Today.Month && Model.Year==Model.Today.Year?"page":null)">Mês atual</a></div>
   <div class="expense-due-grid revenue-due-grid">
   @foreach(var bucket in Model.Buckets){
     var active=Model.Group==bucket.Key;

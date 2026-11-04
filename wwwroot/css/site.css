@@ -225,3 +225,14 @@
 .expense-due-actions{display:flex;align-items:center;justify-content:flex-end;gap:17px;flex-wrap:wrap}
 .expense-due-actions .btn{white-space:nowrap}
 @media(max-width:600px){.expense-due-heading{align-items:stretch}.expense-due-actions{justify-content:space-between;gap:10px}.expense-due-actions .btn{padding:10px 13px}}
+
+
+/* Personal receivables overview; reuses clickable due-status UI. */
+.revenue-due-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
+.revenue-receipt-summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px;margin:0 0 24px}
+.revenue-receipt-summary-card{display:flex;flex-direction:column;gap:7px;border:1px solid #e1e5df;background:#fff;border-radius:14px;padding:19px;text-decoration:none;color:#25312a}
+.revenue-receipt-summary-card:hover{border-color:#a99cf1}
+.revenue-receipt-summary-card:focus-visible{outline:3px solid #8e7af2;outline-offset:3px}
+.revenue-receipt-summary-card small{font-size:11px;color:#6e7a72}
+.revenue-receipt-summary-card strong{font-size:22px;letter-spacing:-.035em}
+@media(max-width:650px){.revenue-due-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.revenue-receipt-summary{grid-template-columns:1fr}.revenue-receipt-summary-card strong{font-size:19px}}

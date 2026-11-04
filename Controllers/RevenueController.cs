@@ -123,6 +123,8 @@ public class RevenueController(FinanceDbContext db,CurrentUser current,AuditServ
             } else {
                 var future=await db.Revenues.Where(x=>x.UserId==current.Id&&x.RecurringSeriesId==seriesId&&x.Date>=row.Date).ToListAsync();
                 var monthOffset=input.ExpectedReceiptDate.HasValue ? (input.ExpectedReceiptDate.Value.Year-row.Date.Year)*12+input.ExpectedReceiptDate.Value.Month-row.Date.Month : 0;
+                var selectedWasReceived=row.Received;
+                var selectedReceivedDate=row.ReceivedDate;
                 foreach(var entry in future){
                     // A recurring scope updates existing materialized months as well as
                     // future occurrences generated through SeriesRevision snapshots.
@@ -132,7 +134,7 @@ public class RevenueController(FinanceDbContext db,CurrentUser current,AuditServ
                         RecurringService.RecurringDueDate(entry.Date,input.ExpectedReceiptDate.Value.Day,monthOffset):null;
                     entry.Received=input.Received;
                     entry.ReceivedDate=!input.Received?null:
-                        entry.Id==row.Id?(input.ReceivedDate?.Date??(row.Received?row.ReceivedDate:TodayBrasilia())):
+                        entry.Id==row.Id?(input.ReceivedDate?.Date??(selectedWasReceived?selectedReceivedDate:TodayBrasilia())):
                         entry.ReceivedDate;
                 }
                 serie.FutureReceived=input.Received;

@@ -1,8 +1,8 @@
-name: ATLAS - verificação de pendências a cada 10 minutos
+name: ATLAS - lembretes financeiros nos quatro horarios
 on:
   schedule:
-    # Consulta e wake-up do site em intervalos de 10 minutos; envio ocorre apenas nos horarios 08h, 12h, 15h e 18h de Brasilia, ate 4 avisos/dispositivo/dia.
-    - cron: '3,13,23,33,43,53 * * * *'
+    # 08h, 12h, 15h, 18h Brasilia (UTC-3) -> 11h, 15h, 18h, 21h UTC.
+    - cron: '0 11,15,18,21 * * *'
   workflow_dispatch:
 
 permissions:

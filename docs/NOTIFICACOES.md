@@ -19,7 +19,7 @@ No GitHub, em **Settings → Secrets and variables → Actions → New repositor
 crie somente o secret `ATLAS_PUSH_JOB_KEY` com o mesmo valor do MonsterASP.
 
 O arquivo `.github/workflows/push-reminders.yml` aciona
-`POST /api/push/dispatch` a cada **10 minutos** (minutos 03, 13, 23, 33, 43 e 53 UTC). Isso gera tráfego regular que reduz a chance de hibernação no MonsterASP Free. As verificações de 10 em 10 minutos não enviam mensagens adicionais: o envio é limitado a um aviso por faixa horária (08, 12, 15 e 18), até quatro por dia por dispositivo. O GitHub Actions pode atrasar ou até cancelar execuções agendadas; não equivale a monitoramento garantido 24×7.
+`POST /api/push/dispatch` somente às **08h, 12h, 15h e 18h** no horário de Brasília (**11h, 15h, 18h e 21h UTC**). São quatro verificações por dia, cada uma podendo gerar no máximo um aviso por dispositivo quando há despesas sem baixa. O MonsterASP Free poderá hibernar entre as verificações; a requisição agendada tenta despertá-lo. O GitHub Actions e a inicialização da hospedagem podem causar atrasos, e atrasos para fora da hora programada podem resultar em uma notificação não enviada. O GitHub Actions pode atrasar ou até cancelar execuções agendadas; não equivale a monitoramento garantido 24×7.
 Também permite execução manual em **Actions**.
 
 ## Funcionamento
@@ -29,7 +29,7 @@ O ATLAS não usa a data registrada como vencimento: uma despesa com competência
 1. Após entrar no ATLAS, o convite aparece automaticamente; clicar **Ativar notificações** no convite.
 2. Autorizar a notificação no dispositivo.
 3. O navegador envia a assinatura ao backend e ela fica vinculada ao usuário.
-4. O agendamento verifica a cada 10 minutos, mas só nos quatro horários lê as despesas sem baixa do próprio usuário e envia um
+4. O agendamento, somente nos quatro horários, lê as despesas sem baixa do próprio usuário e envia um
    aviso genérico com a quantidade. Ele não expõe valores na tela bloqueada.
 5. Ao clicar na notificação, o usuário vai à página de despesas pendentes.
 6. Para desativar notificações, revogar a permissão nas configurações do navegador/dispositivo. O cadastro poderá ser reativado quando o navegador permitir.

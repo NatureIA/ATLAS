@@ -1,94 +1,104 @@
 (() => {
   'use strict';
-  const section=document.getElementById('atlasPushSettings');
-  if(!section)return;
-  const button=document.getElementById('atlasPushToggle');
-  const status=document.getElementById('atlasPushStatus');
-  const token=section.querySelector('input[name="__RequestVerificationToken"]')?.value;
+  const invite=document.getElementById('atlasPushInvite');
+  if(!invite)return;
+  const accept=document.getElementById('atlasPushAccept');
+  const later=document.getElementById('atlasPushLater');
+  const feedback=document.getElementById('atlasPushInviteFeedback');
+  const token=invite.querySelector('input[name="__RequestVerificationToken"]')?.value||'';
+  const dismissalKey='atlas-push-invite-dismissed-v1';
   const supported=window.isSecureContext && 'serviceWorker' in navigator &&
     'PushManager' in window && 'Notification' in window;
-
-  const message=value=>{if(status)status.textContent=value;};
-  const updateButton=enabled=>{
-    button.hidden=false;
-    button.disabled=false;
-    button.querySelector('.theme-toggle-text').textContent=enabled
-      ? 'Desativar notificações':'Ativar notificações';
-    button.setAttribute('aria-label',enabled?'Desativar notificações':'Ativar notificações');
-    button.setAttribute('aria-pressed',String(enabled));
-  };
+  const message=value=>{feedback.textContent=value;};
   const toBytes=key=>{
     const base64=key.replace(/-/g,'+').replace(/_/g,'/');
     const binary=atob(base64.padEnd(Math.ceil(base64.length/4)*4,'='));
     return Uint8Array.from(binary,c=>c.charCodeAt(0));
   };
-  const post=async(path,payload)=>{
-    const response=await fetch(path,{
-      method:'POST',
-      credentials:'same-origin',
-      headers:{'Content-Type':'application/json','RequestVerificationToken':token||''},
+  const post=async payload=>{
+    const response=await fetch('/api/push/subscribe',{
+      method:'POST',credentials:'same-origin',
+      headers:{'Content-Type':'application/json','RequestVerificationToken':token},
       body:JSON.stringify(payload)
     });
-    if(!response.ok)throw new Error('Não foi possível atualizar a assinatura ('+response.status+').');
-    return response.json();
+    if(!response.ok)throw new Error('Falha ao registrar notificações ('+response.status+').');
   };
-  async function getRegistration(){
-    const registration=await navigator.serviceWorker.register('/service-worker.js',{scope:'/',updateViaCache:'none'});
-    return navigator.serviceWorker.ready;
+  async function registerSubscription(registration,publicKey){
+    const old=await registration.pushManager.getSubscription();
+    const subscription=old||await registration.pushManager.subscribe({
+      userVisibleOnly:true,applicationServerKey:toBytes(publicKey)
+    });
+    const json=subscription.toJSON();
+    try{
+      await post({
+        endpoint:subscription.endpoint,
+        p256dh:json.keys?.p256dh||'',
+        auth:json.keys?.auth||''
+      });
+    }catch(error){
+      if(!old)await subscription.unsubscribe().catch(()=>{});
+      throw error;
+    }
+  }
+  function close(){
+    invite.hidden=true;
+    document.body.classList.remove('atlas-push-invite-open');
+  }
+  function show(){
+    invite.hidden=false;
+    document.body.classList.add('atlas-push-invite-open');
+    accept.focus();
   }
   async function init(){
-    if(!supported){message('Notificações não são suportadas neste navegador.');return;}
+    if(!supported || Notification.permission==='denied')return;
     try{
-      const configResponse=await fetch('/api/push/config',{credentials:'same-origin',cache:'no-store'});
-      if(!configResponse.ok)throw new Error('Serviço indisponível.');
-      const config=await configResponse.json();
-      if(!config.enabled){message('Envio de notificações aguardando configuração do administrador.');return;}
-      const registration=await getRegistration();
-      const subscription=await registration.pushManager.getSubscription();
-      if(subscription && Notification.permission==='granted'){
-        // Restore this device's subscription on login and after reload.
-        const json=subscription.toJSON();
-        await post('/api/push/subscribe',{
-          endpoint:subscription.endpoint,
-          p256dh:json.keys?.p256dh||'',
-          auth:json.keys?.auth||''
-        });
+      const response=await fetch('/api/push/config',{credentials:'same-origin',cache:'no-store'});
+      if(!response.ok)return;
+      const config=await response.json();
+      if(!config.enabled || !config.publicKey)return;
+      const registration=await navigator.serviceWorker.register(
+        '/service-worker.js',{scope:'/',updateViaCache:'none'});
+      await navigator.serviceWorker.ready;
+      const existing=await registration.pushManager.getSubscription();
+      if(existing && Notification.permission==='granted'){
+        await registerSubscription(registration,config.publicKey);
+        return;
       }
-      updateButton(!!subscription);
-      message(subscription?'Notificações ativadas neste dispositivo.':'Avisos diários de despesas sem baixa.');
-      button.addEventListener('click',async()=>{
-        button.disabled=true;
-        try{
-          const current=await registration.pushManager.getSubscription();
-          if(current){
-            await post('/api/push/unsubscribe',{endpoint:current.endpoint});
-            await current.unsubscribe();
-            updateButton(false);
-            message('Notificações desativadas neste dispositivo.');
-          } else {
-            const permission=await Notification.requestPermission();
-            if(permission!=='granted')throw new Error('Permissão de notificações não concedida.');
-            const fresh=await registration.pushManager.subscribe({
-              userVisibleOnly:true,applicationServerKey:toBytes(config.publicKey)
-            });
-            const json=fresh.toJSON();
-            try{
-              await post('/api/push/subscribe',{
-                endpoint:fresh.endpoint,
-                p256dh:json.keys?.p256dh||'',
-                auth:json.keys?.auth||''
-              });
-            } catch(error){
-              await fresh.unsubscribe();
-              throw error;
-            }
-            updateButton(true);
-            message('Notificações ativadas neste dispositivo.');
-          }
-        }catch(error){message(error.message||'Não foi possível ativar notificações.');}
-        finally{button.disabled=false;}
+      // Permission already granted: register without another user interaction.
+      if(Notification.permission==='granted'){
+        await registerSubscription(registration,config.publicKey);
+        return;
+      }
+      try{if(localStorage.getItem(dismissalKey)==='yes')return;}catch(_){}
+      // Browser policies require the native permission request to originate from a click.
+      show();
+      later.addEventListener('click',()=>{
+        try{localStorage.setItem(dismissalKey,'yes');}catch(_){}
+        close();
       });
-    }catch(error){message(error.message||'Notificações indisponíveis.');}
+      accept.addEventListener('click',async()=>{
+        accept.disabled=true;
+        message('Solicitando autorização ao dispositivo...');
+        try{
+          const permission=await Notification.requestPermission();
+          if(permission!=='granted'){
+            message('Permissão não concedida. Você pode autorizá-la nas configurações do navegador.');
+            accept.disabled=false;
+            return;
+          }
+          message('Registrando o dispositivo...');
+          await registerSubscription(registration,config.publicKey);
+          try{localStorage.removeItem(dismissalKey);}catch(_){}
+          close();
+        }catch(error){
+          message(error.message||'Não foi possível ativar notificações.');
+          accept.disabled=false;
+        }
+      });
+    }catch(error){
+      console.warn('ATLAS: notificações indisponíveis',error);
+      close();
+    }
   }
   init();
 })();

@@ -115,7 +115,7 @@ public sealed class PushReminderService(
                     }
                     logger.LogWarning("ATLAS push delivery failed (status {Status}) for device {Id}",(int)e.StatusCode,device.Id);
                 } catch(Exception e) {
-                    await ReleaseClaim(device.Id,today,ct);
+                    await ReleaseClaim(device.Id,today,slot,ct);
                     logger.LogError(e,"ATLAS push delivery failed for device {Id}",device.Id);
                 }
             }

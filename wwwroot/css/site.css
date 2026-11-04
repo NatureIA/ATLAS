@@ -170,3 +170,26 @@
 .dashboard-chart-empty{padding:50px 10px;text-align:center;color:#8b948e;font-size:11px}
 @media(max-width:760px){.dashboard-chart-months{gap:5px}.dashboard-chart-positive,.dashboard-chart-negative{gap:3px}.dashboard-chart-filters{gap:6px}.dashboard-chart-filter{padding:7px 8px;font-size:10px}}
 @media(prefers-reduced-motion:reduce){.dashboard-chart-bar{transition:none}}
+
+
+/* Expense due-date command center: accounting competence controls all cards. */
+.expense-due-section{margin:0 0 18px;min-width:0}
+.expense-due-heading{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:14px}
+.expense-due-heading h3{font-size:17px;letter-spacing:-.035em;margin:4px 0 5px}
+.expense-due-heading .muted{font-size:11px;margin:0;line-height:1.5}
+.expense-due-reset{font-size:11px;font-weight:700;color:#6350e8;text-decoration:none}
+.expense-due-reset:hover{text-decoration:underline}
+.expense-due-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:11px}
+.expense-due-card{display:flex;flex-direction:column;align-items:flex-start;min-width:0;gap:8px;padding:19px 17px;border:1px solid #e1e5df;border-radius:15px;background:#fff;color:#1c2721;text-decoration:none;transition:border-color .16s ease,box-shadow .16s ease,transform .16s ease}
+.expense-due-card:hover{border-color:#a99cf1;box-shadow:0 10px 25px #2d295515;transform:translateY(-2px)}
+.expense-due-card:focus-visible{outline:3px solid #8e7af2;outline-offset:3px}
+.expense-due-card.selected{border-color:#6350e8;box-shadow:inset 0 0 0 1px #6350e8,0 7px 20px #6350e81a;background:#f8f6ff}
+.expense-due-label{font-size:11px;font-weight:750;line-height:1.4}
+.expense-due-count{font-size:30px;font-weight:800;letter-spacing:-.055em;line-height:1}
+.expense-due-amount{font-size:12px;font-weight:750;overflow-wrap:anywhere}
+.expense-due-hint{font-size:10px;color:#68766d;margin-top:auto}
+.expense-due-card.selected .expense-due-hint{color:#6350e8;font-weight:750}
+@media(max-width:1050px){.expense-due-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:650px){.expense-due-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.expense-due-card{padding:15px 13px}.expense-due-count{font-size:27px}.expense-due-heading h3{font-size:16px}}
+@media(max-width:380px){.expense-due-grid{grid-template-columns:1fr 1fr}.expense-due-card{padding:12px}.expense-due-label{font-size:10px}}
+@media(prefers-reduced-motion:reduce){.expense-due-card{transition:none}.expense-due-card:hover{transform:none}}

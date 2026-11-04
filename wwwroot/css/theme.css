@@ -232,3 +232,5 @@ html[data-atlas-theme="dark"] .expense-filter-trigger-icon{color:#d4ff24}
 html[data-atlas-theme="dark"] .expense-filter-active{background:#17335a;color:#bcd4ff}
 html[data-atlas-theme="dark"] .expense-filter-chevron{color:#a7b9d7}
 html[data-atlas-theme="dark"] .expense-filter-disclosure[open] .expense-filter-trigger{border-bottom-color:transparent}
+
+html[data-atlas-theme="dark"] .expense-due-period{color:#a7b9d7}

@@ -214,3 +214,9 @@
 .expense-filter-disclosure[open] .expense-filter-chevron{transform:rotate(180deg)}
 @media(max-width:600px){.expense-filter-trigger{padding:13px 14px}.expense-filter-active{font-size:9px}}
 @media(prefers-reduced-motion:reduce){.expense-filter-trigger,.expense-filter-chevron{transition:none}}
+
+/* Minimal titles for expenses and its due-date command center. */
+.expense-due-title{display:flex;align-items:center;flex-wrap:wrap;gap:12px;min-width:0}
+.expense-due-title h3{margin:0}
+.expense-due-period{font-size:11px;font-weight:650;color:#87918a;text-transform:capitalize}
+@media(max-width:600px){.expense-due-title{gap:8px}.expense-due-period{font-size:10px}}

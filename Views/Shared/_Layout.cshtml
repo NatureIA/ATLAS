@@ -46,6 +46,14 @@
       <a class="@(path.StartsWith("/reports")?"selected":"")" asp-controller="Reports" asp-action="Index"><span class="nav-icon">▥</span> Relatórios</a>
     </nav>
     <div class="sidebar-spacer"></div>
+    <div class="atlas-push-settings" id="atlasPushSettings">
+      @Html.AntiForgeryToken()
+      <button id="atlasPushToggle" class="atlas-theme-toggle atlas-push-toggle" type="button" hidden aria-label="Ativar notificações financeiras">
+        <span class="theme-toggle-icon" aria-hidden="true">♧</span>
+        <span class="theme-toggle-text">Ativar notificações</span>
+      </button>
+      <small id="atlasPushStatus" class="atlas-push-status" role="status"></small>
+    </div>
     <button id="atlasThemeToggle" class="atlas-theme-toggle" type="button" aria-pressed="false" aria-label="Ativar tema escuro">
       <span class="theme-toggle-icon" aria-hidden="true">☾</span>
       <span class="theme-toggle-text">Tema escuro</span>
@@ -74,6 +82,7 @@
 }else{
   <main class="auth-container">@RenderBody()</main>
 }
+<script src="~/js/notifications.js" asp-append-version="true"></script>
 <script src="~/js/theme.js" asp-append-version="true"></script>
 <script src="~/js/site.js" asp-append-version="true"></script>
 <script src="~/js/pwa.js" asp-append-version="true"></script>

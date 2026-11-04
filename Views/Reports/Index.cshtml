@@ -9,6 +9,10 @@
 <div class="metric-card"><div class="metric-label">Margem após despesas</div><strong class="metric-number">@Model.Margin.ToString("N1")%</strong><small>@Model.SourceCount origens com faturamento</small></div>
 </div>
 <div class="report-payment-summary">
+  <div class="report-payment-stat"><span>Receitas recebidas</span><strong>@Model.ReceivedRevenue.ToString("C")</strong><small>Entradas confirmadas na competência anual</small></div>
+  <div class="report-payment-stat"><span>Receitas a receber</span><strong>@Model.PendingRevenue.ToString("C")</strong><small>Valores registrados ainda não recebidos</small></div>
+</div>
+<div class="report-payment-summary">
   <div class="report-payment-stat"><span>Despesas pagas</span><strong>@Model.PaidExpenses.ToString("C")</strong><small>Compromissos já quitados no ano</small></div>
   <div class="report-payment-stat"><span>Despesas pendentes</span><strong>@Model.PendingExpenses.ToString("C")</strong><small>Compromissos ainda não quitados no ano</small></div>
 </div>

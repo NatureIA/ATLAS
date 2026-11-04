@@ -275,3 +275,21 @@ html[data-atlas-theme="dark"] .atlas-overview-extra>div{background:#17253c}
 html[data-atlas-theme="dark"] .atlas-overview-extra small{color:#a7b9d7}
 html[data-atlas-theme="dark"] .atlas-overview .dashboard-chart-filter-received .dashboard-chart-swatch,
 html[data-atlas-theme="dark"] .atlas-overview .dashboard-chart-bar.received{background:#52a7ff}
+
+
+/* Monthly cashflow forecast: dark theme. */
+html[data-atlas-theme="dark"] .atlas-month-forecast-chart,
+html[data-atlas-theme="dark"] .atlas-month-forecast-detail{background:#10192b;border-color:#2b3c5c;color:#eaf1ff}
+html[data-atlas-theme="dark"] .atlas-month-forecast-column{color:#eaf1ff}
+html[data-atlas-theme="dark"] .atlas-month-forecast-column:hover{background:#192a49}
+html[data-atlas-theme="dark"] .atlas-month-forecast-column.selected{background:#1b2952;border-color:#5c75bf}
+html[data-atlas-theme="dark"] .atlas-month-forecast-result,
+html[data-atlas-theme="dark"] .atlas-month-forecast-legend,
+html[data-atlas-theme="dark"] .atlas-month-forecast-detail-title span,
+html[data-atlas-theme="dark"] .atlas-month-forecast-entries a small{color:#a7b9d7}
+html[data-atlas-theme="dark"] .atlas-month-forecast-entries a{color:#eaf1ff;border-color:#2b3c5c}
+html[data-atlas-theme="dark"] .atlas-month-forecast-bars{border-color:#2b3c5c}
+html[data-atlas-theme="dark"] .forecast-income-swatch,
+html[data-atlas-theme="dark"] .atlas-month-forecast-bar.forecast-income-bar{background:#d4ff24}
+html[data-atlas-theme="dark"] .forecast-expense-swatch,
+html[data-atlas-theme="dark"] .atlas-month-forecast-bar.forecast-expense-bar{background:#5683c8}

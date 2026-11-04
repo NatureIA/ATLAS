@@ -1,9 +1,9 @@
 @model ExpenseListVm
-@{ ViewData["Title"]="Despesas"; }
+@{ ViewData["Title"]="Despesas"; var competenceLabel=new DateTime(Model.Year!.Value,Model.Month!.Value,1).ToString("MMMM yyyy",CultureInfo.GetCultureInfo("pt-BR")); }
 <div class="section-heading"><div><div class="eyebrow">SAÍDAS FINANCEIRAS</div><h2>Despesas</h2><p class="muted">Compromissos, recorrências e parcelas em um só lugar.</p></div><a class="btn dark" asp-action="Create">+ Nova despesa</a></div>
 <section class="expense-due-section" aria-label="Central de vencimentos">
   <div class="expense-due-heading">
-    <div><div class="eyebrow">CENTRAL DE VENCIMENTOS</div><h3>Prioridades da competência</h3><p class="muted">Resumo de despesas pendentes em @new DateTime(Model.Year!.Value,Model.Month!.Value,1).ToString("MMMM yyyy",CultureInfo.GetCultureInfo("pt-BR")). Selecione um indicador para filtrar a lista.</p></div>
+    <div><div class="eyebrow">CENTRAL DE VENCIMENTOS</div><h3>Prioridades da competência</h3><p class="muted">Resumo de despesas pendentes em @competenceLabel. Selecione um indicador para filtrar a lista.</p></div>
     <a class="expense-due-reset" asp-action="Index" asp-route-year="@Model.Year" asp-route-month="@Model.Month">Ver todas da competência</a>
   </div>
   <div class="expense-due-grid">
@@ -37,7 +37,7 @@
 <div class="field"><label>Ano da competência</label><input name="year" type="number" min="2000" max="2100" value="@Model.Year" required /></div>
 <div class="field"><label>Mês da competência</label><select name="month" required>@for(var i=1;i<=12;i++){<option value="@i" selected="@(Model.Month==i)">@CultureInfo.GetCultureInfo("pt-BR").DateTimeFormat.GetMonthName(i)</option>}</select></div>
 </div><div class="filter-actions"><button class="btn dark">Filtrar</button><a class="btn ghost" asp-action="Index">Mês atual / Limpar</a></div></form>
-<section class="card table-card"><div class="card-title"><div><div class="eyebrow">COMPROMISSOS</div><h3>Despesas registradas — @new DateTime(Model.Year!.Value,Model.Month!.Value,1).ToString("MMMM yyyy",CultureInfo.GetCultureInfo("pt-BR"))</h3></div><span class="card-meta">Até 500 registros</span></div>
+<section class="card table-card"><div class="card-title"><div><div class="eyebrow">COMPROMISSOS</div><h3>Despesas registradas — @competenceLabel</h3></div><span class="card-meta">Até 500 registros</span></div>
 @if(Model.Rows.Count==0){<div class="empty-inline">Nenhuma despesa encontrada para os filtros selecionados.</div>}
 else{<div class="table-scroll"><table><thead><tr><th>Descrição</th><th>Competência</th><th>Vencimento</th><th>Categoria</th><th>Pagamento</th><th>Tipo</th><th>Status</th><th class="align-right">Valor</th><th>Ações</th></tr></thead><tbody>
 @foreach(var row in Model.Rows){<tr><td class="strong-cell">@row.Description

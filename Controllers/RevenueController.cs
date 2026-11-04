@@ -56,7 +56,7 @@ public class RevenueController(FinanceDbContext db,CurrentUser current,AuditServ
         }
         var rows=await q.OrderByDescending(x=>x.Date).ThenByDescending(x=>x.Id).Take(500).ToListAsync();
         return View(new RevenueListVm{Rows=rows,Search=search,PaymentMethod=paymentMethod,
-            Year=selectedYear,Month=selectedMonth,Status=status,Group=group,Buckets=buckets});
+            Year=selectedYear,Month=selectedMonth,Today=today,Status=status,Group=group,Buckets=buckets});
     }
     [HttpGet] public async Task<IActionResult> Create(){var vm=new RevenueInput();await Options(vm);return View("Form",vm);}
     [HttpPost,ValidateAntiForgeryToken]

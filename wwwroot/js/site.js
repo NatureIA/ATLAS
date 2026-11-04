@@ -261,6 +261,25 @@
     amount?.addEventListener('input',preview);
     preview();
   }
+  // Revenue forecast and receipt status stay independent from accounting competence.
+  const revenueReceived=document.querySelector('#revenueReceived');
+  if(revenueReceived){
+    const expected=document.querySelector('#ExpectedReceiptDate');
+    const receivedDate=document.querySelector('#ReceivedDate');
+    const recurring=document.querySelector('#IsRecurring');
+    function syncRevenue(){
+      const received=revenueReceived.value==='true';
+      if(expected)expected.required=!received||!!recurring?.checked;
+      if(receivedDate){
+        if(!received)receivedDate.value='';
+        receivedDate.disabled=!received;
+        receivedDate.closest('.field')?.classList.toggle('hidden',!received);
+      }
+    }
+    revenueReceived.addEventListener('change',syncRevenue);
+    recurring?.addEventListener('change',syncRevenue);
+    syncRevenue();
+  }
   const expense=document.querySelector('#expenseForm');
   if(expense){
     const payment=document.querySelector('#expensePayment');

@@ -32,7 +32,7 @@ self.addEventListener('push', event => {
     icon:'/icons/atlas-192.png',
     badge:'/icons/atlas-192.png',
     tag:'atlas-pending-expenses',
-    renotify:false,
+    renotify:true,
     data:{url:safeUrl}
   }));
 });

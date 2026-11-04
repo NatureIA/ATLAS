@@ -12,7 +12,7 @@ public class HomeController(FinancialService finance, CurrentUser user, ILogger<
     [HttpGet]
     public async Task<IActionResult> Index(int? year,int? month){
         var y=year??DateTime.Today.Year;var m=month??DateTime.Today.Month;
-        if(y is < 2000 or > 2100 || m is < 1 or > 12)return BadRequest("Competência inválida.");
+        if(y is < 2000 or > 2100 || m is < 0 or > 12)return BadRequest("Competência inválida.");
         return View(await finance.DashboardAsync(user.Id,y,m));
     }
 

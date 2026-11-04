@@ -1,7 +1,23 @@
 # ATLAS — Notificações Web Push
 
-O ATLAS apresenta um convite automático após o login, por dispositivo, sem exigir procura por um botão na barra lateral. O usuário toca em **Ativar notificações** para solicitar a permissão nativa ao navegador. Não é possível abrir a permissão nativa de forma confiável sem um gesto do usuário. O ATLAS envia, no máximo, quatro lembretes por dispositivo e por dia, nas janelas das **08h, 12h, 15h e 18h (Brasília)**, quando existir despesa com **Paid = false** e competência igual ou anterior ao mês atual. O campo Date é a competência, não o vencimento:
+O ATLAS apresenta um convite automático após o login, por dispositivo, sem exigir procura por um botão na barra lateral. O usuário toca em **Ativar notificações** para solicitar a permissão nativa ao navegador. Não é possível abrir a permissão nativa de forma confiável sem um gesto do usuário. O ATLAS avalia a urgência por vencimento às **08h, 12h, 15h e 18h (Brasília)** e envia até quatro lembretes por dispositivo ao dia, somente quando há pendências relevantes. Despesas sem vencimento continuam sendo consideradas pela competência, sem presunção de atraso. O campo Date é a competência, não o vencimento:
 não informar no texto que uma conta "vence hoje" ou "está atrasada".
+
+
+## Alertas inteligentes por vencimento
+
+A **competência financeira** (campo `Date`) e a **data de vencimento** (`DueDate`, opcional) são independentes. A data de vencimento é editável no formulário de despesas; parcelas podem receber o vencimento da primeira parcela e datas mensais subsequentes, e recorrências têm dia do mês e deslocamento mensal próprios.
+
+Cada despesa não paga é reclassificada antes de cada janela, sem cache de status financeiro. O envio é uma notificação consolidada **por dispositivo e por janela**, nunca uma mensagem por despesa.
+
+- **08h:** vencidas, vencendo hoje, amanhã, dentro dos próximos 2–3 ou 4–7 dias; também pendências sem data de vencimento de competências até o mês atual.
+- **12h e 15h:** apenas vencidas ou vencendo hoje.
+- **18h:** vencidas, vencendo hoje ou amanhã.
+- Sem pendências relevantes para a janela: não envia notificação.
+- Marcada como paga: sai imediatamente da próxima avaliação.
+- Vencimento não informado: não classificar como atrasado; lembrete de competência apenas às 08h.
+- Vencimentos em anos anteriores e próximos dias são avaliados pela data completa, não pelo mês da competência.
+- O horário é Brasília e o agendamento do GitHub Actions e despertar do MonsterASP não possuem SLA de pontualidade.
 
 ## Configuração privada obrigatória
 

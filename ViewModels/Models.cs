@@ -36,6 +36,7 @@ public class ExpenseInput {
     public bool IsPreviousMonth {get;set;}
     [Range(1,120)] public int Installments {get;set;}=1;
     [DataType(DataType.Date)] public DateTime? FirstBillDate {get;set;}
+    [DataType(DataType.Date)] public DateTime? DueDate {get;set;}
     [MaxLength(1000)] public string? Notes {get;set;}
     public List<string> Categories {get;set;}=[];
     public bool ExistingRecurring {get;set;}
@@ -50,6 +51,7 @@ public class InstallmentGroupInput {
     [Required] public string PaymentMethod {get;set;}="Crédito";
     [Range(1,120)] public int Installments {get;set;}=1;
     [Required,DataType(DataType.Date)] public DateTime FirstInstallmentDate {get;set;}
+    [DataType(DataType.Date)] public DateTime? FirstDueDate {get;set;}
     [MaxLength(1000)] public string? Notes {get;set;}
     public List<string> Categories {get;set;}=[];
     public int CurrentInstallments {get;set;}

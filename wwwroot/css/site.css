@@ -251,3 +251,12 @@
 .revenue-cashflow-note{font-size:10px;color:#7b847e;margin:10px 0 0}
 @media(max-width:850px){.revenue-cashflow-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:400px){.revenue-cashflow-stat{padding:12px}.revenue-cashflow-stat strong{font-size:15px}}
+
+
+/* Annual revenue browsing: compact responsive period shortcuts and pagination. */
+.revenue-period-shortcuts{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 14px}
+.revenue-period-shortcuts .btn{font-size:11px;padding:9px 12px}
+.revenue-period-shortcuts a[aria-current="page"]{border-color:#6350e8;color:#6350e8;font-weight:750}
+.revenue-page-nav{display:flex;align-items:center;justify-content:center;gap:13px;flex-wrap:wrap;margin:16px 0 0}
+.revenue-page-nav span{font-size:11px;color:#68766d}
+@media(max-width:600px){.revenue-period-shortcuts .btn{flex:1;min-width:130px;text-align:center}}

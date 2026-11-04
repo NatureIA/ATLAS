@@ -81,7 +81,8 @@ public sealed class PushReminderService(
                 var claimed=await db.PushDevices.Where(x=>x.Id==device.Id && x.Active &&
                     (x.LastNotifiedDay==null || x.LastNotifiedDay<today))
                     .ExecuteUpdateAsync(set=>set
-                        .SetProperty(x=>x.LastNotifiedDay,(DateTime?)today),ct);
+                        .SetProperty(x=>x.LastNotifiedDay,(DateTime?)today)
+                        .SetProperty(x=>x.LastNotifiedUtc,(DateTime?)null),ct);
                 if(claimed==0)continue;
                 try {
                     await client.SendNotificationAsync(

@@ -1,0 +1,34 @@
+name: ATLAS - lembretes de despesas pendentes
+on:
+  schedule:
+    # 12:00 UTC = 09:00 no horario de Brasilia.
+    - cron: '0 12 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: atlas-push-reminders
+  cancel-in-progress: false
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      ATLAS_PUSH_JOB_KEY: ${{ secrets.ATLAS_PUSH_JOB_KEY }}
+    steps:
+      - name: Verificar configuracao privada
+        run: |
+          if [ -z "$ATLAS_PUSH_JOB_KEY" ]; then
+            echo "::error::Configure ATLAS_PUSH_JOB_KEY nos Secrets do repositorio e no MonsterASP."
+            exit 1
+          fi
+      - name: Acionar lembretes no backend autenticado
+        run: |
+          curl --fail-with-body --silent --show-error \
+            --max-time 180 --retry 2 \
+            --request POST \
+            --header "X-ATLAS-PUSH-KEY: $ATLAS_PUSH_JOB_KEY" \
+            "https://salta-atlas.runasp.net/api/push/dispatch"

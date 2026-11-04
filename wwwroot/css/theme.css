@@ -185,3 +185,11 @@ html[data-atlas-theme="dark"] .dashboard-chart-positive{border-color:#304668}
 html[data-atlas-theme="dark"] .dashboard-chart-month-label,
 html[data-atlas-theme="dark"] .dashboard-chart-note,
 html[data-atlas-theme="dark"] .dashboard-chart-empty{color:#a7b9d7}
+
+/* Sidebar Web Push opt-in: consistent in both palettes. */
+.atlas-push-settings{margin-bottom:8px;min-width:0}
+.atlas-push-toggle{margin:0}
+.atlas-push-toggle[hidden]{display:none!important}
+.atlas-push-toggle[disabled]{cursor:wait;opacity:.65}
+.atlas-push-status{display:block;padding:7px 10px 0;font-size:10px;line-height:1.5;color:#e0dbff}
+html[data-atlas-theme="dark"] .atlas-push-status{color:#a7b9d7}

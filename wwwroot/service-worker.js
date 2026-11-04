@@ -20,3 +20,33 @@ self.addEventListener('fetch', event => {
     return response;
   }).catch(() => caches.match(request)));
 });
+
+/* Push notifications only; existing installation/cache lifecycle remains unchanged. */
+self.addEventListener('push', event => {
+  let payload={title:'ATLAS',body:'Você possui despesas pendentes de baixa.',url:'/Expenses?status=pending',tag:'atlas-pending-expenses'};
+  try { if(event.data) payload={...payload,...event.data.json()}; } catch (_) {}
+  const safeUrl=typeof payload.url==='string' && payload.url.startsWith('/') && !payload.url.startsWith('//')
+    ?payload.url:'/Expenses?status=pending';
+  event.waitUntil(self.registration.showNotification(String(payload.title).slice(0,90),{
+    body:String(payload.body).slice(0,180),
+    icon:'/icons/atlas-192.png',
+    badge:'/icons/atlas-192.png',
+    tag:'atlas-pending-expenses',
+    renotify:false,
+    data:{url:safeUrl}
+  }));
+});
+self.addEventListener('notificationclick',event=>{
+  event.notification.close();
+  const target=new URL(event.notification.data?.url||'/Expenses?status=pending',self.location.origin).href;
+  event.waitUntil((async()=>{
+    const windows=await clients.matchAll({type:'window',includeUncontrolled:true});
+    for(const windowClient of windows){
+      if(windowClient.url.startsWith(self.location.origin)){
+        await windowClient.navigate(target);
+        return windowClient.focus();
+      }
+    }
+    return clients.openWindow(target);
+  })());
+});

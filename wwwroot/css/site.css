@@ -220,3 +220,8 @@
 .expense-due-title h3{margin:0}
 .expense-due-period{font-size:11px;font-weight:650;color:#87918a;text-transform:capitalize}
 @media(max-width:600px){.expense-due-title{gap:8px}.expense-due-period{font-size:10px}}
+
+/* Compact expense action header: one page title in topbar only. */
+.expense-due-actions{display:flex;align-items:center;justify-content:flex-end;gap:17px;flex-wrap:wrap}
+.expense-due-actions .btn{white-space:nowrap}
+@media(max-width:600px){.expense-due-heading{align-items:stretch}.expense-due-actions{justify-content:space-between;gap:10px}.expense-due-actions .btn{padding:10px 13px}}

@@ -1,10 +1,9 @@
 @model ExpenseListVm
 @{ ViewData["Title"]="Despesas"; var competenceLabel=new DateTime(Model.Year!.Value,Model.Month!.Value,1).ToString("MMMM yyyy",CultureInfo.GetCultureInfo("pt-BR")); }
-<div class="section-heading"><div><h2>Despesas</h2><p class="muted">Controle de pagamentos e vencimentos.</p></div><a class="btn dark" asp-action="Create">+ Nova despesa</a></div>
 <section class="expense-due-section" aria-label="Central de vencimentos">
   <div class="expense-due-heading">
     <div class="expense-due-title"><h3>Vencimentos</h3><span class="expense-due-period">@competenceLabel</span></div>
-    <a class="expense-due-reset" asp-action="Index" asp-route-year="@Model.Year" asp-route-month="@Model.Month">Ver todas da competência</a>
+    <div class="expense-due-actions"><a class="expense-due-reset" asp-action="Index" asp-route-year="@Model.Year" asp-route-month="@Model.Month">Ver todas da competência</a><a class="btn dark" asp-action="Create">+ Nova despesa</a></div>
   </div>
   <div class="expense-due-grid">
   @foreach(var bucket in Model.DueBuckets){

@@ -66,6 +66,7 @@ public class RecurringExpenseSeries {
     public DateTime StartDate { get; set; }
     public DateTime? EndDate { get; set; }
     public int? DueDay { get; set; }
+    public int DueMonthOffset { get; set; }
     public bool Active { get; set; } = true;
     public string? Notes { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

@@ -107,7 +107,7 @@ public class ExpensesController(FinanceDbContext db,CurrentUser current,AuditSer
                 ModelState.AddModelError(nameof(input.Notes),"As observações ultrapassam o limite ao adicionar a chave fiscal.");
                 await Options(input);return View("Form",input);
             }
-            input.Notes=string.IsNullOrEmpty(currentNotes)?fiscalNote:currentNotes+"\\n"+fiscalNote;
+            input.Notes=string.IsNullOrEmpty(currentNotes)?fiscalNote:currentNotes+"\n"+fiscalNote;
         }
         var category=input.Category=="__new__"?input.NewCategory!.Trim():input.Category;
         var today=DateTime.Today;

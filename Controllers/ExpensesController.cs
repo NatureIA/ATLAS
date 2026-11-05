@@ -74,10 +74,41 @@ public class ExpensesController(FinanceDbContext db,CurrentUser current,AuditSer
             Year=selectedYear,Month=selectedMonth,DueGroup=dueGroup,DueBuckets=buckets,
             Categories=categories,ActiveSeries=activeSeries.ToHashSet(),ExpenseType=expenseType,PaymentMethod=paymentMethod});
     }
+    [HttpPost,ValidateAntiForgeryToken]
+    public IActionResult FiscalPreview([FromForm] string raw){
+        try {
+            var preview=FiscalQrService.Parse(raw);
+            return Json(new {
+                ok=true,accessKey=preview.AccessKey,issuerCnpj=preview.IssuerCnpj,
+                issueMonth=preview.IssueDate?.ToString("MM/yyyy"),
+                amount=preview.Amount,consultationUrl=preview.ConsultationUrl,
+                message=preview.Message,reliableAmount=preview.ReliableAmount
+            });
+        } catch(ArgumentException exception) {
+            return BadRequest(new {ok=false,message=exception.Message});
+        }
+    }
     [HttpGet] public async Task<IActionResult> Create(){var vm=new ExpenseInput();await Options(vm);return View("Form",vm);}
     [HttpPost,ValidateAntiForgeryToken] public async Task<IActionResult> Save(ExpenseInput input){
         Validate(input,true);
+        var key=input.FiscalAccessKey?.Trim();
+        if(!string.IsNullOrEmpty(key)){
+            if(!FiscalQrService.ValidAccessKey(key))ModelState.AddModelError(nameof(input.FiscalAccessKey),"Chave fiscal inválida.");
+            else if(await db.Expenses.AsNoTracking().AnyAsync(x=>x.UserId==current.Id &&
+                x.Notes!=null && x.Notes.Contains("Documento fiscal (chave): "+key))){
+                ModelState.AddModelError(nameof(input.FiscalAccessKey),"Este documento fiscal já foi utilizado em outra despesa. Verifique o histórico.");
+            }
+        }
         if(!ModelState.IsValid){await Options(input);return View("Form",input);}
+        if(!string.IsNullOrEmpty(key)){
+            var fiscalNote="Documento fiscal (chave): "+key;
+            var currentNotes=input.Notes?.Trim()??"";
+            if(currentNotes.Length+fiscalNote.Length+1>1000){
+                ModelState.AddModelError(nameof(input.Notes),"As observações ultrapassam o limite ao adicionar a chave fiscal.");
+                await Options(input);return View("Form",input);
+            }
+            input.Notes=string.IsNullOrEmpty(currentNotes)?fiscalNote:currentNotes+"\n"+fiscalNote;
+        }
         var category=input.Category=="__new__"?input.NewCategory!.Trim():input.Category;
         var today=DateTime.Today;
         // Only the initial date is shifted; existing payment, recurrence and installment rules stay intact.

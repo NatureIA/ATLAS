@@ -8,14 +8,17 @@ Esta alteração foi desenvolvida a partir do commit de referência do **ATLAS 2
 - Reconhecer NFC-e/NF-e por chave de 44 dígitos com dígito verificador válido, extrair CNPJ do emitente e mês/ano do documento.
 - Quando o QR Code de contingência *offline* trouxer o campo de valor total vNF, preencher o valor. Caso contrário, não inventar valor nem nome comercial.
 - Expor o endereço do portal fiscal original para conferência. Não contornar CAPTCHA, autenticação ou respostas que exigem JavaScript. Não executar scraping ou downloads externos.
-- Sugerir descrição genérica e categoria Compras, deixando tudo editável. A data de competência, status de pagamento e forma de pagamento permanecem sob controle do usuário.
+- Nunca inventar nome do estabelecimento, categoria Compras, forma de pagamento Pix ou valor. Sem a informação fiscal correspondente, os campos permanecem sem seleção.
+- Importar opcionalmente o XML da NFC-e/NF-e diretamente no navegador, sem enviá-lo ao servidor: ler emitente (`xFant`/`xNome`), valor (`vNF`), data (`dhEmi`), itens (`xProd`) e pagamento (`tPag`). Quando itens são inequivocamente compatíveis, sugerir categoria determinística; em caso de dúvida, exigir escolha.
+- Para pagamento único e integral com débito, Pix ou dinheiro informado no XML, marcar a despesa avulsa como paga; outras modalidades exigem revisão.
+- Respeitar a data real da compra quando conhecida, sem confundir o mês codificado na chave com uma data exata. A competência da despesa avulsa usa a data confirmada e não um mês presumido.
 - Manter a chave fiscal nas observações do lançamento e impedir o cadastro repetido da mesma chave pelo mesmo usuário.
 - Usar sempre o fluxo de salvamento e validação já existente do ATLAS: somente o usuário confirma o registro.
 - Sem IA generativa, novas tabelas, alterações destrutivas de dados ou envio de fotos ao backend.
 
 ## Limitações conhecidas
 
-O QR Code, em especial o online, frequentemente contém **a URL e a chave**, não o valor, a data completa, os itens ou o nome comercial. A câmera e a leitura de imagem requerem suporte do navegador à API BarcodeDetector e HTTPS; nos demais casos o usuário pode utilizar um leitor externo do aparelho e colar o link. Algumas consultas da SEFAZ exigem CAPTCHA. A leitura de QR Code não é validação da situação fiscal do documento no portal. Sempre conferir informações antes do registro.
+O QR Code, em especial o online, frequentemente contém **a URL e a chave**, não o valor, a data completa, os itens, a modalidade de pagamento ou o nome comercial. Para recuperar todos esses campos é necessário o documento completo (XML ou serviço fiscal que os disponibilize). A câmera e a leitura de imagem requerem suporte do navegador à API BarcodeDetector e HTTPS; nos demais casos o usuário pode utilizar um leitor externo do aparelho e colar o link. Algumas consultas da SEFAZ exigem CAPTCHA. A leitura de QR Code não é validação da situação fiscal do documento no portal. Sempre conferir informações antes do registro.
 
 ## Reversão
 

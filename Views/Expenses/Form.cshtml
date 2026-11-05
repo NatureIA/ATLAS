@@ -3,6 +3,40 @@
 <div class="section-heading"><div><div class="eyebrow">DESPESAS</div><h2>@(edit?"Editar despesa":"Registrar despesa")</h2><p class="muted">@(edit?"A competência original não será modificada.":"Escolha os dados essenciais. As opções adicionais aparecem quando necessário.")</p></div><a class="btn ghost" asp-action="Index">← Voltar</a></div>
 <div class="card form-card"><form asp-controller="Expenses" asp-action="@(edit?"Update":"Save")" asp-route-id="@Model.Id" method="post" asp-antiforgery="true" class="finance-form" id="expenseForm" data-edit="@(edit?"true":"false")">
 <div asp-validation-summary="All" class="validation"></div>
+@if(!edit){
+<section class="fiscal-import" id="fiscalQrPanel" data-preview-url="@Url.Action("FiscalPreview","Expenses")">
+  <div class="fiscal-import-heading">
+    <div><h3>Importar por QR Code</h3><p>Leia um cupom ou nota fiscal e confira os dados antes de registrar.</p></div>
+    <span>Opcional</span>
+  </div>
+  <div class="fiscal-import-controls">
+    <button class="btn ghost" type="button" id="fiscalCameraStart">Abrir câmera</button>
+    <label class="btn ghost fiscal-upload-label" for="fiscalQrImage">Enviar foto do QR Code</label>
+    <input id="fiscalQrImage" type="file" accept="image/*" class="fiscal-visually-hidden" />
+  </div>
+  <div class="fiscal-camera-box" id="fiscalCameraBox" hidden>
+    <video id="fiscalCameraVideo" autoplay muted playsinline aria-label="Câmera para leitura do QR Code"></video>
+    <button type="button" class="btn ghost" id="fiscalCameraStop">Fechar câmera</button>
+  </div>
+  <label class="fiscal-import-link-label" for="fiscalQrRaw">Link ou conteúdo do QR Code</label>
+  <div class="fiscal-import-link-row">
+    <input id="fiscalQrRaw" type="text" maxlength="2400" autocomplete="off" placeholder="Cole aqui o link fiscal ou a chave de 44 dígitos" />
+    <button type="button" class="btn dark" id="fiscalQrRead">Ler dados</button>
+  </div>
+  <input asp-for="FiscalAccessKey" type="hidden" id="FiscalAccessKey" />
+  <span asp-validation-for="FiscalAccessKey" class="validation"></span>
+  <p class="fiscal-import-message" id="fiscalQrMessage" role="status" aria-live="polite">A leitura do QR Code não registra nenhuma despesa automaticamente.</p>
+  <div id="fiscalQrResult" class="fiscal-import-result" hidden>
+    <div><small>Chave fiscal</small><strong id="fiscalKeyValue"></strong></div>
+    <div><small>CNPJ do estabelecimento</small><strong id="fiscalCnpjValue"></strong></div>
+    <div><small>Mês fiscal da emissão</small><strong id="fiscalMonthValue"></strong></div>
+    <div><small>Valor identificado</small><strong id="fiscalAmountValue"></strong></div>
+    <a id="fiscalOfficialLink" href="#" target="_blank" rel="noopener noreferrer" hidden>Conferir no portal fiscal oficial ↗</a>
+  </div>
+  <p class="fiscal-import-note">Nem todo QR Code contém o total, a data completa ou o nome do estabelecimento. Quando não estiverem disponíveis, confira a nota e preencha manualmente. O ATLAS não contorna CAPTCHA da SEFAZ.</p>
+</section>
+}
+
 <div class="field-grid">
 <div class="field full"><label asp-for="Description">Descrição <b>*</b></label><input asp-for="Description" required maxlength="250" placeholder="Ex.: Assinatura de software" /></div>
 <div class="field"><label asp-for="Category">Categoria <b>*</b></label><select asp-for="Category" id="categorySelect" required>

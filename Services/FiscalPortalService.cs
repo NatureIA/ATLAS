@@ -129,7 +129,7 @@ public static class FiscalPortalService {
     private static decimal? AmountByCss(HtmlDocument document,string[] classes){
         foreach(var cls in classes){
             var found=document.DocumentNode.SelectNodes("//*[contains(concat(' ',normalize-space(@class),' '),' "+cls+" ')]")
-                ??(document.GetElementbyId(cls) is { } node?new HtmlNodeCollection(null){node}:null);
+                ??(document.GetElementbyId(cls) is { } element?new HtmlNodeCollection(null){element}:null);
             if(found==null)continue;
             foreach(var node in found){
                 if(TryAmount(Clean(node.InnerText),out var amount))return amount;

@@ -3,7 +3,7 @@
 <section class="expense-due-section" aria-label="Central de vencimentos">
   <div class="expense-due-heading">
     <div class="expense-due-title"><h3>Vencimentos</h3><span class="expense-due-period">@competenceLabel</span></div>
-    <div class="expense-due-actions"><a class="expense-due-reset" asp-action="Index" asp-route-year="@Model.Year" asp-route-month="@Model.Month">Ver todas da competência</a><a class="btn dark" asp-action="Create">+ Nova despesa</a></div>
+    <div class="expense-due-actions"><a class="expense-due-reset" asp-action="Index" asp-route-year="@Model.Year" asp-route-month="@Model.Month">Ver todas da competência</a><a class="btn ghost" asp-action="Create" asp-fragment="fiscalQrPanel">Ler QR Code</a><a class="btn dark" asp-action="Create">+ Nova despesa</a></div>
   </div>
   <div class="expense-due-grid">
   @foreach(var bucket in Model.DueBuckets){

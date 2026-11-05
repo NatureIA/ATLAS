@@ -333,6 +333,139 @@
     recurring?.addEventListener('change',syncRevenue);
     syncRevenue();
   }
+  // QR-driven expense intake: browser-side scanning, deterministic server parsing.
+  // No financial record is saved until the user submits the existing expense form.
+  const fiscalPanel=document.querySelector('#fiscalQrPanel');
+  if(fiscalPanel){
+    const raw=document.getElementById('fiscalQrRaw');
+    const read=document.getElementById('fiscalQrRead');
+    const status=document.getElementById('fiscalQrMessage');
+    const result=document.getElementById('fiscalQrResult');
+    const accessKey=document.getElementById('FiscalAccessKey');
+    const upload=document.getElementById('fiscalQrImage');
+    const cameraStart=document.getElementById('fiscalCameraStart');
+    const cameraStop=document.getElementById('fiscalCameraStop');
+    const cameraBox=document.getElementById('fiscalCameraBox');
+    const video=document.getElementById('fiscalCameraVideo');
+    const official=document.getElementById('fiscalOfficialLink');
+    let stream=null,scanning=false,scanner=null,scanningFrame=0;
+    const say=message=>{if(status)status.textContent=message;};
+    const fill=(id,value)=>{const target=document.getElementById(id);if(target)target.textContent=value||'Não disponível';};
+    const money=new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'});
+    function stopCamera(){
+      scanning=false;
+      if(scanningFrame)cancelAnimationFrame(scanningFrame);
+      scanningFrame=0;
+      if(stream){stream.getTracks().forEach(track=>track.stop());stream=null;}
+      if(video)video.srcObject=null;
+      if(cameraBox)cameraBox.hidden=true;
+    }
+    async function analyzeText(text){
+      if(!text||!text.trim()){say('Informe o link, a chave ou faça a leitura do QR Code.');return;}
+      read.disabled=true;
+      say('Validando o documento fiscal…');
+      if(accessKey)accessKey.value='';
+      if(result)result.hidden=true;
+      const formData=new FormData();
+      formData.append('raw',text.trim());
+      const csrf=document.querySelector('#expenseForm input[name="__RequestVerificationToken"]');
+      if(csrf)formData.append('__RequestVerificationToken',csrf.value);
+      try{
+        const response=await fetch(fiscalPanel.dataset.previewUrl,{
+          method:'POST',body:formData,credentials:'same-origin',headers:{'Accept':'application/json'}
+        });
+        const data=await response.json();
+        if(!response.ok||!data.ok)throw new Error(data.message||'Não foi possível validar o QR Code.');
+        if(accessKey)accessKey.value=data.accessKey||'';
+        fill('fiscalKeyValue',data.accessKey||'');
+        fill('fiscalCnpjValue',data.issuerCnpj||'');
+        fill('fiscalMonthValue',data.issueMonth||'');
+        fill('fiscalAmountValue',data.amount!=null?money.format(data.amount):'Confira na nota');
+        const amount=document.querySelector('#expenseForm #Amount');
+        if(amount && data.reliableAmount && data.amount>0)amount.value=String(data.amount);
+        const description=document.querySelector('#expenseForm #Description');
+        if(description && !description.value.trim() && data.issuerCnpj)
+          description.value='Compra fiscal - CNPJ '+data.issuerCnpj;
+        const category=document.querySelector('#categorySelect');
+        if(category && [...category.options].some(option=>option.value==='Compras'))category.value='Compras';
+        if(official){
+          const url=data.consultationUrl||'';
+          if(url && /^https?:\\/\\//i.test(url)){
+            official.href=url;official.hidden=false;
+          } else {official.removeAttribute('href');official.hidden=true;}
+        }
+        if(result)result.hidden=false;
+        say((data.message||'Chave fiscal validada.')+' Confira descrição, valor, categoria e demais campos antes de salvar.');
+      } catch(error){
+        say(error.message||'Não foi possível processar a leitura fiscal.');
+      } finally{read.disabled=false;}
+    }
+    read?.addEventListener('click',()=>analyzeText(raw?.value||''));
+    raw?.addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();analyzeText(raw.value);}});
+    raw?.addEventListener('input',()=>{
+      if(accessKey)accessKey.value='';
+      if(result)result.hidden=true;
+    });
+    async function makeDetector(){
+      if(!('BarcodeDetector' in window))throw new Error('Este navegador não oferece leitura nativa de QR Code. Cole o link fiscal ou utilize um leitor de QR Code do aparelho.');
+      if(!scanner)scanner=new BarcodeDetector({formats:['qr_code']});
+      return scanner;
+    }
+    upload?.addEventListener('change',async()=>{
+      const file=upload.files?.[0];if(!file)return;
+      if(!file.type.startsWith('image/')){say('Selecione uma imagem válida.');return;}
+      if(file.size>12*1024*1024){say('Imagem muito grande. Escolha uma foto de até 12 MB.');return;}
+      let image=null;
+      try{
+        const detector=await makeDetector();
+        image=await createImageBitmap(file);
+        const codes=await detector.detect(image);
+        const value=codes.find(code=>code.rawValue)?.rawValue;
+        if(!value){say('Nenhum QR Code legível na imagem. Tente outra foto ou cole o link.');return;}
+        if(raw)raw.value=value;
+        await analyzeText(value);
+      }catch(error){say(error.message||'Falha ao ler a imagem. Utilize o link do QR Code.');}
+      finally{image?.close?.();upload.value='';}
+    });
+    cameraStart?.addEventListener('click',async()=>{
+      if(scanning)return;
+      try{
+        const detector=await makeDetector();
+        if(!navigator.mediaDevices?.getUserMedia)
+          throw new Error('A câmera não está disponível neste navegador.');
+        stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}},audio:false});
+        video.srcObject=stream;
+        cameraBox.hidden=false;
+        await video.play();
+        scanning=true;
+        say('Aponte a câmera para o QR Code da nota fiscal.');
+        const scan=async()=>{
+          if(!scanning)return;
+          try{
+            if(video.readyState>=2){
+              const codes=await detector.detect(video);
+              const value=codes.find(code=>code.rawValue)?.rawValue;
+              if(value){
+                if(raw)raw.value=value;
+                stopCamera();
+                await analyzeText(value);
+                return;
+              }
+            }
+          }catch(_){}
+          if(scanning)scanningFrame=requestAnimationFrame(scan);
+        };
+        scanningFrame=requestAnimationFrame(scan);
+      }catch(error){
+        stopCamera();
+        say(error.message||'Não foi possível abrir a câmera.');
+      }
+    });
+    cameraStop?.addEventListener('click',stopCamera);
+    document.addEventListener('visibilitychange',()=>{if(document.hidden)stopCamera();});
+    document.querySelector('#expenseForm')?.addEventListener('submit',stopCamera);
+    window.addEventListener('pagehide',stopCamera);
+  }
   const expense=document.querySelector('#expenseForm');
   if(expense){
     const payment=document.querySelector('#expensePayment');

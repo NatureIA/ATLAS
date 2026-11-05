@@ -31,7 +31,7 @@
   <div id="fiscalQrResult" class="fiscal-import-result" hidden>
     <div><small>Chave fiscal</small><strong id="fiscalKeyValue"></strong></div>
     <div><small>CNPJ do estabelecimento</small><strong id="fiscalCnpjValue"></strong></div>
-    <div><small>Mês fiscal da emissão</small><strong id="fiscalMonthValue"></strong></div>
+    <div><small>Mês/ano da chave fiscal</small><strong id="fiscalMonthValue"></strong></div>
     <div><small>Valor identificado</small><strong id="fiscalAmountValue"></strong></div>
     <div><small>Nome do estabelecimento</small><strong id="fiscalIssuerValue"></strong></div>
     <div><small>Forma de pagamento</small><strong id="fiscalPaymentValue"></strong></div>
@@ -47,7 +47,7 @@
 @if(!edit){<div class="field"><label asp-for="PurchaseDate">Data da compra (opcional)</label><input asp-for="PurchaseDate" type="date" /><small class="field-help">O mês da compra define a competência da despesa avulsa; é independente do vencimento.</small></div>}
 <div class="field full"><label asp-for="Description">Descrição <b>*</b></label><input asp-for="Description" required maxlength="250" placeholder="Ex.: Assinatura de software" /></div>
 <div class="field"><label asp-for="Category">Categoria <b>*</b></label><select asp-for="Category" id="categorySelect" required>
-@if(!edit){<option value="" selected="@(string.IsNullOrEmpty(Model.FiscalAccessKey))">Selecione a categoria</option>}
+@if(!edit){<option value="">Selecione a categoria</option>}
 @foreach(var cat in Model.Categories){<option value="@cat">@cat</option>}<option value="__new__">+ Criar nova categoria</option>
 </select></div>
 <div class="field hidden conditional" id="newCategoryField"><label asp-for="NewCategory">Nova categoria</label><input asp-for="NewCategory" maxlength="100" /></div>

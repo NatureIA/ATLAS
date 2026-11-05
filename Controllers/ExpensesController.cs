@@ -81,6 +81,7 @@ public class ExpensesController(FinanceDbContext db,CurrentUser current,AuditSer
             return Json(new {
                 ok=true,accessKey=preview.AccessKey,issuerCnpj=preview.IssuerCnpj,
                 issueMonth=preview.IssueDate?.ToString("MM/yyyy"),
+                issueDate=preview.HasExactIssueDate?preview.IssueDate?.ToString("yyyy-MM-dd"):null,
                 amount=preview.Amount,consultationUrl=preview.ConsultationUrl,
                 message=preview.Message,reliableAmount=preview.ReliableAmount
             });
@@ -88,9 +89,15 @@ public class ExpensesController(FinanceDbContext db,CurrentUser current,AuditSer
             return BadRequest(new {ok=false,message=exception.Message});
         }
     }
-    [HttpGet] public async Task<IActionResult> Create(){var vm=new ExpenseInput();await Options(vm);return View("Form",vm);}
+    [HttpGet] public async Task<IActionResult> Create(){var vm=new ExpenseInput{Category="",PaymentMethod=""};await Options(vm);return View("Form",vm);}
     [HttpPost,ValidateAntiForgeryToken] public async Task<IActionResult> Save(ExpenseInput input){
         Validate(input,true);
+        if(input.PurchaseDate.HasValue && (input.PurchaseDate.Value.Year is < 2000 or > 2100))
+            ModelState.AddModelError(nameof(input.PurchaseDate),"Data da compra inválida.");
+        if(input.PurchaseDate.HasValue && input.IsPreviousMonth)
+            ModelState.AddModelError(nameof(input.PurchaseDate),"Use a data da compra ou a opção de mês passado, não ambas.");
+        if(input.PurchaseDate.HasValue && input.IsRecurring)
+            ModelState.AddModelError(nameof(input.PurchaseDate),"Data da compra fiscal é destinada a despesas avulsas.");
         var key=input.FiscalAccessKey?.Trim();
         if(!string.IsNullOrEmpty(key)){
             if(!FiscalQrService.ValidAccessKey(key))ModelState.AddModelError(nameof(input.FiscalAccessKey),"Chave fiscal inválida.");
@@ -112,7 +119,7 @@ public class ExpensesController(FinanceDbContext db,CurrentUser current,AuditSer
         var category=input.Category=="__new__"?input.NewCategory!.Trim():input.Category;
         var today=DateTime.Today;
         // Only the initial date is shifted; existing payment, recurrence and installment rules stay intact.
-        var effectiveToday=input.IsPreviousMonth?today.AddMonths(-1):today;
+        var effectiveToday=input.PurchaseDate?.Date??(input.IsPreviousMonth?today.AddMonths(-1):today);
         DateTime InitialBillDate()=>input.IsPreviousMonth
             ?input.FirstBillDate!.Value.Date.AddMonths(-1)
             :input.FirstBillDate!.Value.Date;

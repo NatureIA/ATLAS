@@ -29,6 +29,7 @@ public class RevenueInput {
 public class ExpenseInput {
     public long? Id {get;set;}
     [MaxLength(44)] public string? FiscalAccessKey {get;set;}
+    [DataType(DataType.Date)] public DateTime? PurchaseDate {get;set;}
     [Required,MaxLength(250)] public string Description {get;set;}="";
     [Required,MaxLength(100)] public string Category {get;set;}="Outros";
     [MaxLength(100)] public string? NewCategory {get;set;}

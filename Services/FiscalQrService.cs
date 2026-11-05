@@ -7,7 +7,7 @@ namespace Atlas.Services;
 // Public portals sometimes demand CAPTCHA/JavaScript; in that case the form stays editable.
 public static class FiscalQrService {
     public sealed record Preview(string? AccessKey,string? IssuerCnpj,string? IssuerName,
-        DateTime? IssueDate,decimal? Amount,string? ConsultationUrl,string Message,bool ReliableAmount);
+        DateTime? IssueDate,decimal? Amount,string? ConsultationUrl,string Message,bool ReliableAmount,bool HasExactIssueDate);
 
     public static Preview Parse(string? raw) {
         var value=raw?.Trim()??"";
@@ -39,12 +39,17 @@ public static class FiscalQrService {
         DateTime? date=year is >=2000 and <=2100 && month is >=1 and <=12?new DateTime(year,month,1):null;
         decimal? total=null;
         var fields=fiscalPart.Split('|');
-        var offline=fields.Length>=6 && fields[0].Contains(key,StringComparison.Ordinal)
-            && fields[3].Length==2 && fields[3].All(char.IsDigit);
+        // The online QR formats typically contain only key/version/environment.
+        // Offline QR may include the exact issue day and the fiscal total.
+        var offline=fields.Length>=6 && fields[0]==key &&
+            (fields[1]=="2" || fields[1]=="3") &&
+            (fields[2]=="1" || fields[2]=="2") &&
+            fields[3].Length==2 && fields[3].All(char.IsDigit);
+        var exactDate=false;
         if(offline && date.HasValue &&
             int.TryParse(fields[3],NumberStyles.None,CultureInfo.InvariantCulture,out var fiscalDay) &&
             fiscalDay>=1 && fiscalDay<=DateTime.DaysInMonth(year,month))
-            date=new DateTime(year,month,fiscalDay);
+            { date=new DateTime(year,month,fiscalDay); exactDate=true; }
         // In QR Code 2/3 offline the fifth field is vNF. Online QR code does not
         // contain a reliable amount. Never use any arbitrary digits as a price.
         if(offline && decimal.TryParse(fields[4],NumberStyles.AllowDecimalPoint,CultureInfo.InvariantCulture,out var amount)
@@ -54,7 +59,7 @@ public static class FiscalQrService {
             total.HasValue
                 ?"Valor encontrado no QR Code fiscal; confira na nota antes de registrar."
                 :"Chave fiscal identificada. Este QR Code não contém valor confiável; consulte a nota e preencha o valor.",
-            total.HasValue);
+            total.HasValue,exactDate);
     }
 
     public static bool ValidAccessKey(string value){

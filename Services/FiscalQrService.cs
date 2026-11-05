@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Net;
 using System.Text.RegularExpressions;
 
 namespace Atlas.Services;
@@ -42,6 +41,10 @@ public static class FiscalQrService {
         var fields=fiscalPart.Split('|');
         var offline=fields.Length>=6 && fields[0].Contains(key,StringComparison.Ordinal)
             && fields[3].Length==2 && fields[3].All(char.IsDigit);
+        if(offline && date.HasValue &&
+            int.TryParse(fields[3],NumberStyles.None,CultureInfo.InvariantCulture,out var fiscalDay) &&
+            fiscalDay>=1 && fiscalDay<=DateTime.DaysInMonth(year,month))
+            date=new DateTime(year,month,fiscalDay);
         // In QR Code 2/3 offline the fifth field is vNF. Online QR code does not
         // contain a reliable amount. Never use any arbitrary digits as a price.
         if(offline && decimal.TryParse(fields[4],NumberStyles.AllowDecimalPoint,CultureInfo.InvariantCulture,out var amount)

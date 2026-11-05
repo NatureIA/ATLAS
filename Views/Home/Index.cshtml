@@ -118,10 +118,6 @@
     <div class="atlas-overview-detail-body">
       <div class="atlas-overview-analysis-grid">
         <section class="card">
-          <div class="card-title"><h3>Evolução financeira</h3><span class="card-meta">@(Model.FullYear?"12 meses":"Últimos 6 meses")</span></div>
-          <partial name="_Chart" model="Model.History" />
-        </section>
-        <section class="card">
           <div class="card-title"><h3>Receitas por origem</h3></div>
           <partial name="_Ranking" model="Model.Sources" />
         </section>

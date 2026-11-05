@@ -89,7 +89,7 @@ public class ExpensesController(FinanceDbContext db,CurrentUser current,AuditSer
             return BadRequest(new {ok=false,message=exception.Message});
         }
     }
-    [HttpGet] public async Task<IActionResult> Create(){var vm=new ExpenseInput();await Options(vm);return View("Form",vm);}
+    [HttpGet] public async Task<IActionResult> Create(){var vm=new ExpenseInput{Category="",PaymentMethod=""};await Options(vm);return View("Form",vm);}
     [HttpPost,ValidateAntiForgeryToken] public async Task<IActionResult> Save(ExpenseInput input){
         Validate(input,true);
         if(input.PurchaseDate.HasValue && (input.PurchaseDate.Value.Year is < 2000 or > 2100))

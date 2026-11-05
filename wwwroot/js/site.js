@@ -390,7 +390,7 @@
         if(category && [...category.options].some(option=>option.value==='Compras'))category.value='Compras';
         if(official){
           const url=data.consultationUrl||'';
-          if(url && /^https?:\\/\\//i.test(url)){
+          if(url && (url.startsWith('https://')||url.startsWith('http://'))){
             official.href=url;official.hidden=false;
           } else {official.removeAttribute('href');official.hidden=true;}
         }

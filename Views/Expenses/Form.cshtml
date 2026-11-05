@@ -13,8 +13,6 @@
     <button class="btn ghost" type="button" id="fiscalCameraStart">Abrir câmera</button>
     <label class="btn ghost fiscal-upload-label" for="fiscalQrImage">Enviar foto do QR Code</label>
     <input id="fiscalQrImage" type="file" accept="image/*" class="fiscal-visually-hidden" />
-    <label class="btn ghost fiscal-upload-label" for="fiscalXmlFile">Importar XML da nota</label>
-    <input id="fiscalXmlFile" type="file" accept=".xml,text/xml,application/xml" class="fiscal-visually-hidden" />
   </div>
   <div class="fiscal-camera-box" id="fiscalCameraBox" hidden>
     <video id="fiscalCameraVideo" autoplay muted playsinline aria-label="Câmera para leitura do QR Code"></video>
@@ -39,7 +37,7 @@
     <div><small>Produtos / serviços</small><strong id="fiscalItemsValue"></strong></div>
     <a id="fiscalOfficialLink" href="#" target="_blank" rel="noopener noreferrer" hidden>Conferir no portal fiscal oficial ↗</a>
   </div>
-  <p class="fiscal-import-note">O QR Code online normalmente não contém nome do estabelecimento, valor, itens ou forma de pagamento. Para preencher esses dados com precisão, importe o XML da NFC-e/NF-e quando disponível. Não há consulta automática garantida aos portais da SEFAZ; o ATLAS não contorna CAPTCHA. Dados não encontrados nunca serão presumidos.</p>
+  <p class="fiscal-import-note">O ATLAS tentará consultar a nota diretamente no portal fiscal indicado pelo QR Code. Alguns portais exigem validação humana ou bloqueiam consultas automáticas; nesses casos, o ATLAS informará o impedimento sem inventar valores e permitirá conferir a nota pelo link oficial.</p>
 </section>
 }
 

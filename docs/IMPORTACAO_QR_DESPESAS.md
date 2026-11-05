@@ -1,25 +1,24 @@
-# Leitura de QR Code fiscal nas Despesas
+# Importação de despesas por QR Code fiscal
 
-Esta alteração foi desenvolvida a partir do commit de referência do **ATLAS 2.0** `80697dd7561660f4a7096e18ebaf1511e5dc89ca`, preservado na branch `backup/atlas-2.0-2026-11-05`.
+Referência preservada: ATLAS 2.0 — `backup/atlas-2.0-2026-11-05` (`80697dd7561660f4a7096e18ebaf1511e5dc89ca`).
 
-## Escopo efetivamente implementado
+## Fluxo único solicitado
 
-- Em **Despesas → Ler QR Code** / **Nova despesa**, ler QR Code com câmera em navegadores compatíveis com BarcodeDetector; opcionalmente carregar foto ou colar conteúdo/link.
-- Reconhecer NFC-e/NF-e por chave de 44 dígitos com dígito verificador válido, extrair CNPJ do emitente e mês/ano do documento.
-- Quando o QR Code de contingência *offline* trouxer o campo de valor total vNF, preencher o valor. Caso contrário, não inventar valor nem nome comercial.
-- Expor o endereço do portal fiscal original para conferência. Não contornar CAPTCHA, autenticação ou respostas que exigem JavaScript. Não executar scraping ou downloads externos.
-- Nunca inventar nome do estabelecimento, categoria Compras, forma de pagamento Pix ou valor. Sem a informação fiscal correspondente, os campos permanecem sem seleção.
-- Importar opcionalmente o XML da NFC-e/NF-e diretamente no navegador, sem enviá-lo ao servidor: ler emitente (`xFant`/`xNome`), valor (`vNF`), data (`dhEmi`), itens (`xProd`) e pagamento (`tPag`). Quando itens são inequivocamente compatíveis, sugerir categoria determinística; em caso de dúvida, exigir escolha.
-- Para pagamento único e integral com débito, Pix ou dinheiro informado no XML, marcar a despesa avulsa como paga; outras modalidades exigem revisão.
-- Respeitar a data real da compra quando conhecida, sem confundir o mês codificado na chave com uma data exata. A competência da despesa avulsa usa a data confirmada e não um mês presumido.
-- Manter a chave fiscal nas observações do lançamento e impedir o cadastro repetido da mesma chave pelo mesmo usuário.
-- Usar sempre o fluxo de salvamento e validação já existente do ATLAS: somente o usuário confirma o registro.
-- Sem IA generativa, novas tabelas, alterações destrutivas de dados ou envio de fotos ao backend.
+1. Na tela **Nova despesa**, usar câmera, foto do QR Code ou colar o endereço fiscal.
+2. O ATLAS valida a chave de 44 dígitos e, se o QR trouxer URL de consulta, tenta buscar **automaticamente a página pública da SEFAZ** indicada pelo próprio documento.
+3. A partir dessa página, quando os campos puderem ser verificados, recupera estabelecimento, valor, data, produtos e pagamento; sugere categoria por regras determinísticas, apenas quando os produtos permitem classificação inequívoca.
+4. Apresenta os campos para conferência e exige que o usuário salve a despesa manualmente.
 
-## Limitações conhecidas
+**Não há importação de XML, nenhuma IA e nenhum envio da foto da nota para outro site.**
 
-O QR Code, em especial o online, frequentemente contém **a URL e a chave**, não o valor, a data completa, os itens, a modalidade de pagamento ou o nome comercial. Para recuperar todos esses campos é necessário o documento completo (XML ou serviço fiscal que os disponibilize). A câmera e a leitura de imagem requerem suporte do navegador à API BarcodeDetector e HTTPS; nos demais casos o usuário pode utilizar um leitor externo do aparelho e colar o link. Algumas consultas da SEFAZ exigem CAPTCHA. A leitura de QR Code não é validação da situação fiscal do documento no portal. Sempre conferir informações antes do registro.
+## Limitações reais
 
-## Reversão
+A chave fiscal e a URL sozinhas não contêm todos os dados da nota. O portal público pode apresentar CAPTCHA, redirecionamento, erros ou um leiaute estadual não reconhecido. O ATLAS não contorna CAPTCHA nem inventa informações: informa o motivo e mantém o formulário disponível. O parser da página fiscal depende do leiaute da SEFAZ e deve ser validado com documentos reais de cada UF para garantir cobertura. Uma consulta HTML bem-sucedida não substitui verificação de autenticidade e autorização fiscal.
 
-A alteração é isolada em PR próprio e poderá ser revertida pelo commit de integração sem afetar o ATLAS 2.0 ou registros já existentes. Despesas criadas durante o uso continuam sendo registros financeiros legítimos; revertê-lo não apaga nem corrige lançamentos.
+## Segurança
+
+Sem migração de banco e sem edição ou exclusão de registros existentes; links de consulta só são requisitados no servidor quando HTTPS, host governamental brasileiro e caminho fiscal reconhecido. Sem redirecionamentos automáticos, com limite de 1,5 MB e timeout de nove segundos. O documento é processado em memória; fotos não são enviadas ao backend. O lançamento exige confirmação do usuário.
+
+## Rollback
+
+A feature fica isolada em PR. Para retornar ao ATLAS 2.0, restaurar os arquivos versionados a partir da branch de backup; o SQL Server não está incluído nesse ponto de restauração.

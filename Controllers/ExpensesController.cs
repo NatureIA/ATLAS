@@ -75,15 +75,22 @@ public class ExpensesController(FinanceDbContext db,CurrentUser current,AuditSer
             Categories=categories,ActiveSeries=activeSeries.ToHashSet(),ExpenseType=expenseType,PaymentMethod=paymentMethod});
     }
     [HttpPost,ValidateAntiForgeryToken]
-    public IActionResult FiscalPreview([FromForm] string raw){
+    public async Task<IActionResult> FiscalPreview([FromForm] string raw,CancellationToken cancellationToken){
         try {
             var preview=FiscalQrService.Parse(raw);
+            var portal=await FiscalPortalService.ConsultAsync(preview.ConsultationUrl,preview.AccessKey!,cancellationToken);
             return Json(new {
                 ok=true,accessKey=preview.AccessKey,issuerCnpj=preview.IssuerCnpj,
                 issueMonth=preview.IssueDate?.ToString("MM/yyyy"),
-                issueDate=preview.HasExactIssueDate?preview.IssueDate?.ToString("yyyy-MM-dd"):null,
-                amount=preview.Amount,consultationUrl=preview.ConsultationUrl,
-                message=preview.Message,reliableAmount=preview.ReliableAmount
+                issueDate=portal.PurchaseDate?.ToString("yyyy-MM-dd")
+                    ??(preview.HasExactIssueDate?preview.IssueDate?.ToString("yyyy-MM-dd"):null),
+                amount=portal.Amount??preview.Amount,
+                issuerName=portal.Merchant,paymentMethod=portal.PaymentMethod,
+                items=portal.Products,category=portal.Category,paid=portal.Paid,
+                portalRetrieved=portal.Retrieved,
+                consultationUrl=preview.ConsultationUrl,
+                reliableAmount=portal.Amount.HasValue||preview.ReliableAmount,
+                message=portal.Message
             });
         } catch(ArgumentException exception) {
             return BadRequest(new {ok=false,message=exception.Message});

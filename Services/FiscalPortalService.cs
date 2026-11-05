@@ -51,8 +51,8 @@ public static class FiscalPortalService {
                 ?TryEncoding(encodingName):System.Text.Encoding.UTF8)){
                 document.Load(reader);
             }
-            foreach(var remove in document.DocumentNode.SelectNodes("//script|//style|//noscript|//svg|//iframe")??[])
-                remove.Remove();
+            var hiddenNodes=document.DocumentNode.SelectNodes("//script|//style|//noscript|//svg|//iframe");
+            if(hiddenNodes!=null)foreach(var remove in hiddenNodes)remove.Remove();
             var plain=Clean(document.DocumentNode.InnerText);
             if(Regex.IsMatch(plain,@"captcha|recaptcha|não sou um robô|verificação humana|captcha de segurança",RegexOptions.IgnoreCase))
                 return Fail("A SEFAZ solicitou verificação humana. Não é possível extrair os dados automaticamente neste portal.");

@@ -4,18 +4,18 @@
     <legend>Exibir no gráfico</legend>
     <label class="report-flag report-flag-revenue">
       <input type="checkbox" value="revenue" checked />
-      <span class="report-flag-mark" aria-hidden="true"></span>Faturamento
+      <span class="report-flag-mark" aria-hidden="true"></span>Entradas previstas
     </label>
     <label class="report-flag report-flag-expense">
       <input type="checkbox" value="expense" checked />
-      <span class="report-flag-mark" aria-hidden="true"></span>Despesas
+      <span class="report-flag-mark" aria-hidden="true"></span>Saídas previstas
     </label>
     <label class="report-flag report-flag-result">
       <input type="checkbox" value="result" checked />
-      <span class="report-flag-mark" aria-hidden="true"></span>Resultado
+      <span class="report-flag-mark" aria-hidden="true"></span>Saldo previsto
     </label>
   </fieldset>
-  <p class="report-performance-note">Evolução financeira mensal. Resultado = faturamento − despesas; valores negativos ficam abaixo de zero.</p>
+  <p class="report-performance-note">Projeção de recebimentos e pagamentos pendentes pela data prevista. Meses anteriores não são projetados; o mês atual considera apenas hoje em diante. Saldo previsto = entradas − saídas.</p>
   <div class="report-area-data" hidden>
     @foreach(var point in Model){
       <span data-month="@point.Label"
@@ -25,7 +25,7 @@
     }
   </div>
   <div class="report-area-chart" id="reportAreaChart">
-    <svg id="reportAreaSvg" class="report-area-svg" viewBox="0 0 960 320" aria-label="Evolução mensal de faturamento, despesas e resultado de janeiro a dezembro" role="img">
+    <svg id="reportAreaSvg" class="report-area-svg" viewBox="0 0 960 320" aria-label="Projeção mensal de entradas, saídas e saldo previsto de janeiro a dezembro" role="img">
       <text x="480" y="158" fill="#8f9d93" text-anchor="middle">Carregando gráfico financeiro…</text>
     </svg>
     <div class="report-area-tooltip" id="reportAreaTooltip" aria-hidden="true"></div>

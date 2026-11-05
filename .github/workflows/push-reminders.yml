@@ -1,8 +1,9 @@
 name: ATLAS - lembretes financeiros nos quatro horarios
 on:
   schedule:
-    # 08h, 12h, 15h, 18h Brasilia (UTC-3) -> 11h, 15h, 18h, 21h UTC.
-    - cron: '0 11,15,18,21 * * *'
+    # Wake every 10 minutes. The backend selects the active Brasilia
+    # notification window (08-11, 12-14, 15-17, 18-23) with SQL deduplication.
+    - cron: '3,13,23,33,43,53 * * * *'
   workflow_dispatch:
 
 permissions:
@@ -28,7 +29,7 @@ jobs:
       - name: Reativar ATLAS e verificar despesas pendentes
         run: |
           curl --fail-with-body --silent --show-error \
-            --max-time 180 --retry 2 \
+            --max-time 180 --retry 2 --retry-delay 10 --retry-all-errors \
             --request POST \
             --header "X-ATLAS-PUSH-KEY: $ATLAS_PUSH_JOB_KEY" \
             "https://salta-atlas.runasp.net/api/push/dispatch"

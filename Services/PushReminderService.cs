@@ -45,10 +45,10 @@ public sealed class PushReminderService(
     {
         if (!IsConfigured) throw new InvalidOperationException("Push não configurado.");
 
-        // GitHub Actions calls only at the four designated Brasilia hours.
-        // Deliver ONLY in the matching local hour (no late catch-up).
+        // GitHub scheduled jobs and free hosting can run late. Each slot stays
+        // eligible until the next one, and the SQL claim prevents duplicates.
         var localNow=TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow,BrasiliaTimeZone);
-        var slot=localNow.Hour switch { 8=>8, 12=>12, 15=>15, 18=>18, _=>0 };
+        var slot=localNow.Hour switch { >=18=>18, >=15=>15, >=12=>12, >=8=>8, _=>0 };
         if(slot==0)return 0;
         var today=localNow.Date;
         // Competence is a month, not a bill due date. Include ALL of this month
@@ -59,6 +59,8 @@ public sealed class PushReminderService(
                 (x.LastNotifiedDay==today && (x.LastNotifiedSlot==null || x.LastNotifiedSlot!=slot))))
             .OrderBy(x=>x.Id).Take(1000).ToListAsync(ct);
         var users=devices.Select(x=>x.UserId).Distinct().ToList();
+        logger.LogInformation("ATLAS push dispatch slot {Slot} date {Day}: {Devices} device(s), {Users} user(s) pending evaluation.",
+            slot,today,devices.Count,users.Count);
         var sent=0;
         var client=new WebPushClient();
         var vapid=new VapidDetails(
@@ -159,6 +161,8 @@ public sealed class PushReminderService(
                 }
             }
         }
+        logger.LogInformation("ATLAS push slot {Slot} date {Day}: {Sent} notification(s) accepted by push providers.",
+            slot,today,sent);
         return sent;
     }
 

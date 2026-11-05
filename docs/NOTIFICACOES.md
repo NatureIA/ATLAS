@@ -35,11 +35,11 @@ No GitHub, em **Settings → Secrets and variables → Actions → New repositor
 crie somente o secret `ATLAS_PUSH_JOB_KEY` com o mesmo valor do MonsterASP.
 
 O arquivo `.github/workflows/push-reminders.yml` tenta acionar `POST /api/push/dispatch`
-a cada 10 minutos. O backend agrupa as chamadas em quatro janelas de Brasília:
-**08h–11h59, 12h–14h59, 15h–17h59 e 18h–23h59**.
-Cada janela pode gerar no máximo um aviso por dispositivo quando há pendência relevante.
-Se o GitHub atrasar ou a hospedagem precisar acordar, o disparo ainda poderá acontecer
-dentro da mesma janela, em vez de ser perdido por ultrapassar a hora exata. O MonsterASP Free poderá hibernar entre as verificações; a requisição agendada tenta despertá-lo. O GitHub Actions e a inicialização da hospedagem podem causar atrasos, e atrasos para fora da hora programada podem resultar em uma notificação não enviada. O GitHub Actions pode atrasar ou até cancelar execuções agendadas; não equivale a monitoramento garantido 24×7.
+somente nos horários **08h, 12h, 15h e 18h de Brasília**, com tentativas limitadas aos
+minutos **03, 13 e 23** de cada horário. Não há verificações agendadas nas demais horas.
+O SQL impede notificações duplicadas ao mesmo dispositivo dentro de cada horário.
+Se o GitHub atrasar, o backend aceita o disparo durante a hora correspondente;
+fora dela, não reenvia alertas antigos. O MonsterASP Free poderá hibernar entre as verificações; a requisição agendada tenta despertá-lo. O GitHub Actions e a inicialização da hospedagem podem causar atrasos, e atrasos para fora da hora programada podem resultar em uma notificação não enviada. O GitHub Actions pode atrasar ou até cancelar execuções agendadas; não equivale a monitoramento garantido 24×7.
 Também permite execução manual em **Actions**.
 
 ## Funcionamento

@@ -1,9 +1,9 @@
 name: ATLAS - lembretes financeiros nos quatro horarios
 on:
   schedule:
-    # Wake every 10 minutes. The backend selects the active Brasilia
-    # notification window (08-11, 12-14, 15-17, 18-23) with SQL deduplication.
-    - cron: '3,13,23,33,43,53 * * * *'
+    # 08h, 12h, 15h, 18h Brasilia, with limited retries at +10/+20 min.
+    # UTC-3: 11h, 15h, 18h, 21h UTC. No checks in other hours.
+    - cron: '3,13,23 11,15,18,21 * * *'
   workflow_dispatch:
 
 permissions:

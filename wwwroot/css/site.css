@@ -391,31 +391,3 @@ a.atlas-overview-metric:focus-visible,.atlas-attention-item:focus-visible,.atlas
   .atlas-month-forecast-month{font-size:10px}
   .atlas-month-forecast-result{font-size:9px}
 }
-
-
-/* Optional fiscal receipt QR capture, without changing expense posting flow. */
-.fiscal-import{border:1px solid #dfe5df;background:#f8faf8;border-radius:13px;padding:17px 18px;margin-bottom:21px;min-width:0}
-.fiscal-import-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
-.fiscal-import-heading h3{font-size:15px;margin:0 0 5px;letter-spacing:-.03em}
-.fiscal-import-heading p{font-size:11px;color:#6d796f;margin:0;line-height:1.5}
-.fiscal-import-heading>span{font-size:10px;font-weight:700;color:#7c8b80;white-space:nowrap}
-.fiscal-import-controls{display:flex;flex-wrap:wrap;gap:9px;margin:15px 0}
-.fiscal-upload-label{cursor:pointer;display:inline-flex;align-items:center}
-.fiscal-visually-hidden{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
-.fiscal-visually-hidden:focus-visible+.fiscal-upload-label{outline:2px solid #6350e8}
-.fiscal-import-link-label{font-size:11px;font-weight:700;display:block;margin-bottom:6px}
-.fiscal-import-link-row{display:flex;gap:8px;min-width:0}
-.fiscal-import-link-row input{flex:1;min-width:0;border:1px solid #dae0da;border-radius:9px;padding:11px;font:inherit;font-size:12px;background:#fff;color:#253129}
-.fiscal-import-link-row button{flex-shrink:0}
-.fiscal-import-message{margin:12px 0 0;color:#3a6753;font-size:11px;line-height:1.5}
-.fiscal-import-result{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;border-top:1px solid #dfe5df;padding-top:13px;margin-top:13px}
-.fiscal-import-result[hidden]{display:none}
-.fiscal-import-result>div{display:flex;flex-direction:column;gap:5px;min-width:0}
-.fiscal-import-result small{color:#78857c;font-size:10px}
-.fiscal-import-result strong{font-size:12px;overflow-wrap:anywhere}
-.fiscal-import-result a{font-size:11px;grid-column:1/-1;font-weight:700;color:#6350e8}
-.fiscal-import-note{color:#7d887f;font-size:10px;line-height:1.65;margin:12px 0 0}
-.fiscal-camera-box{margin:12px 0;display:flex;flex-direction:column;gap:8px;align-items:flex-start}
-.fiscal-camera-box[hidden]{display:none}
-.fiscal-camera-box video{background:#101a15;width:100%;max-height:290px;object-fit:contain;border-radius:10px}
-@media(max-width:600px){.fiscal-import{padding:14px 12px}.fiscal-import-link-row{flex-direction:column}.fiscal-import-link-row button{width:100%}.fiscal-import-result{grid-template-columns:1fr}}

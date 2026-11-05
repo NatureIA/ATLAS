@@ -293,14 +293,3 @@ html[data-atlas-theme="dark"] .forecast-income-swatch,
 html[data-atlas-theme="dark"] .atlas-month-forecast-bar.forecast-income-bar{background:#d4ff24}
 html[data-atlas-theme="dark"] .forecast-expense-swatch,
 html[data-atlas-theme="dark"] .atlas-month-forecast-bar.forecast-expense-bar{background:#5683c8}
-
-
-html[data-atlas-theme="dark"] .fiscal-import{background:#121e31;border-color:#2b3c5c;color:#eaf1ff}
-html[data-atlas-theme="dark"] .fiscal-import-heading p,
-html[data-atlas-theme="dark"] .fiscal-import-note,
-html[data-atlas-theme="dark"] .fiscal-import-result small,
-html[data-atlas-theme="dark"] .fiscal-import-heading>span{color:#a7b9d7}
-html[data-atlas-theme="dark"] .fiscal-import-link-row input{background:#10192b;border-color:#33486d;color:#eaf1ff}
-html[data-atlas-theme="dark"] .fiscal-import-result{border-color:#33486d}
-html[data-atlas-theme="dark"] .fiscal-import-message{color:#d4ff24}
-html[data-atlas-theme="dark"] .fiscal-import-result a{color:#a9bfff}

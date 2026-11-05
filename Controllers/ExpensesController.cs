@@ -74,59 +74,14 @@ public class ExpensesController(FinanceDbContext db,CurrentUser current,AuditSer
             Year=selectedYear,Month=selectedMonth,DueGroup=dueGroup,DueBuckets=buckets,
             Categories=categories,ActiveSeries=activeSeries.ToHashSet(),ExpenseType=expenseType,PaymentMethod=paymentMethod});
     }
-    [HttpPost,ValidateAntiForgeryToken]
-    public async Task<IActionResult> FiscalPreview([FromForm] string raw,CancellationToken cancellationToken){
-        try {
-            var preview=FiscalQrService.Parse(raw);
-            var portal=await FiscalPortalService.ConsultAsync(preview.ConsultationUrl,preview.AccessKey!,cancellationToken);
-            return Json(new {
-                ok=true,accessKey=preview.AccessKey,issuerCnpj=preview.IssuerCnpj,
-                issueMonth=preview.IssueDate?.ToString("MM/yyyy"),
-                issueDate=portal.PurchaseDate?.ToString("yyyy-MM-dd")
-                    ??(preview.HasExactIssueDate?preview.IssueDate?.ToString("yyyy-MM-dd"):null),
-                amount=portal.Amount??preview.Amount,
-                issuerName=portal.Merchant,paymentMethod=portal.PaymentMethod,
-                items=portal.Products,category=portal.Category,paid=portal.Paid,
-                portalRetrieved=portal.Retrieved,
-                consultationUrl=preview.ConsultationUrl,
-                reliableAmount=portal.Amount.HasValue||preview.ReliableAmount,
-                message=portal.Message
-            });
-        } catch(ArgumentException exception) {
-            return BadRequest(new {ok=false,message=exception.Message});
-        }
-    }
-    [HttpGet] public async Task<IActionResult> Create(){var vm=new ExpenseInput{Category="",PaymentMethod=""};await Options(vm);return View("Form",vm);}
+    [HttpGet] public async Task<IActionResult> Create(){var vm=new ExpenseInput();await Options(vm);return View("Form",vm);}
     [HttpPost,ValidateAntiForgeryToken] public async Task<IActionResult> Save(ExpenseInput input){
         Validate(input,true);
-        if(input.PurchaseDate.HasValue && (input.PurchaseDate.Value.Year is < 2000 or > 2100))
-            ModelState.AddModelError(nameof(input.PurchaseDate),"Data da compra inválida.");
-        if(input.PurchaseDate.HasValue && input.IsPreviousMonth)
-            ModelState.AddModelError(nameof(input.PurchaseDate),"Use a data da compra ou a opção de mês passado, não ambas.");
-        if(input.PurchaseDate.HasValue && input.IsRecurring)
-            ModelState.AddModelError(nameof(input.PurchaseDate),"Data da compra fiscal é destinada a despesas avulsas.");
-        var key=input.FiscalAccessKey?.Trim();
-        if(!string.IsNullOrEmpty(key)){
-            if(!FiscalQrService.ValidAccessKey(key))ModelState.AddModelError(nameof(input.FiscalAccessKey),"Chave fiscal inválida.");
-            else if(await db.Expenses.AsNoTracking().AnyAsync(x=>x.UserId==current.Id &&
-                x.Notes!=null && x.Notes.Contains("Documento fiscal (chave): "+key))){
-                ModelState.AddModelError(nameof(input.FiscalAccessKey),"Este documento fiscal já foi utilizado em outra despesa. Verifique o histórico.");
-            }
-        }
         if(!ModelState.IsValid){await Options(input);return View("Form",input);}
-        if(!string.IsNullOrEmpty(key)){
-            var fiscalNote="Documento fiscal (chave): "+key;
-            var currentNotes=input.Notes?.Trim()??"";
-            if(currentNotes.Length+fiscalNote.Length+1>1000){
-                ModelState.AddModelError(nameof(input.Notes),"As observações ultrapassam o limite ao adicionar a chave fiscal.");
-                await Options(input);return View("Form",input);
-            }
-            input.Notes=string.IsNullOrEmpty(currentNotes)?fiscalNote:currentNotes+"\n"+fiscalNote;
-        }
         var category=input.Category=="__new__"?input.NewCategory!.Trim():input.Category;
         var today=DateTime.Today;
         // Only the initial date is shifted; existing payment, recurrence and installment rules stay intact.
-        var effectiveToday=input.PurchaseDate?.Date??(input.IsPreviousMonth?today.AddMonths(-1):today);
+        var effectiveToday=input.IsPreviousMonth?today.AddMonths(-1):today;
         DateTime InitialBillDate()=>input.IsPreviousMonth
             ?input.FirstBillDate!.Value.Date.AddMonths(-1)
             :input.FirstBillDate!.Value.Date;

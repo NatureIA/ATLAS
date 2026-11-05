@@ -13,6 +13,8 @@
     <button class="btn ghost" type="button" id="fiscalCameraStart">Abrir câmera</button>
     <label class="btn ghost fiscal-upload-label" for="fiscalQrImage">Enviar foto do QR Code</label>
     <input id="fiscalQrImage" type="file" accept="image/*" class="fiscal-visually-hidden" />
+    <label class="btn ghost fiscal-upload-label" for="fiscalXmlFile">Importar XML da nota</label>
+    <input id="fiscalXmlFile" type="file" accept=".xml,text/xml,application/xml" class="fiscal-visually-hidden" />
   </div>
   <div class="fiscal-camera-box" id="fiscalCameraBox" hidden>
     <video id="fiscalCameraVideo" autoplay muted playsinline aria-label="Câmera para leitura do QR Code"></video>
@@ -31,20 +33,27 @@
     <div><small>CNPJ do estabelecimento</small><strong id="fiscalCnpjValue"></strong></div>
     <div><small>Mês fiscal da emissão</small><strong id="fiscalMonthValue"></strong></div>
     <div><small>Valor identificado</small><strong id="fiscalAmountValue"></strong></div>
+    <div><small>Nome do estabelecimento</small><strong id="fiscalIssuerValue"></strong></div>
+    <div><small>Forma de pagamento</small><strong id="fiscalPaymentValue"></strong></div>
+    <div><small>Data exata da compra</small><strong id="fiscalDateValue"></strong></div>
+    <div><small>Produtos / serviços</small><strong id="fiscalItemsValue"></strong></div>
     <a id="fiscalOfficialLink" href="#" target="_blank" rel="noopener noreferrer" hidden>Conferir no portal fiscal oficial ↗</a>
   </div>
-  <p class="fiscal-import-note">Nem todo QR Code contém o total, a data completa ou o nome do estabelecimento. Quando não estiverem disponíveis, confira a nota e preencha manualmente. O ATLAS não contorna CAPTCHA da SEFAZ.</p>
+  <p class="fiscal-import-note">O QR Code online normalmente não contém nome do estabelecimento, valor, itens ou forma de pagamento. Para preencher esses dados com precisão, importe o XML da NFC-e/NF-e quando disponível. Não há consulta automática garantida aos portais da SEFAZ; o ATLAS não contorna CAPTCHA. Dados não encontrados nunca serão presumidos.</p>
 </section>
 }
 
 <div class="field-grid">
+@if(!edit){<div class="field"><label asp-for="PurchaseDate">Data da compra (opcional)</label><input asp-for="PurchaseDate" type="date" /><small class="field-help">O mês da compra define a competência da despesa avulsa; é independente do vencimento.</small></div>}
 <div class="field full"><label asp-for="Description">Descrição <b>*</b></label><input asp-for="Description" required maxlength="250" placeholder="Ex.: Assinatura de software" /></div>
 <div class="field"><label asp-for="Category">Categoria <b>*</b></label><select asp-for="Category" id="categorySelect" required>
+@if(!edit){<option value="" selected="@(string.IsNullOrEmpty(Model.FiscalAccessKey))">Selecione a categoria</option>}
 @foreach(var cat in Model.Categories){<option value="@cat">@cat</option>}<option value="__new__">+ Criar nova categoria</option>
 </select></div>
 <div class="field hidden conditional" id="newCategoryField"><label asp-for="NewCategory">Nova categoria</label><input asp-for="NewCategory" maxlength="100" /></div>
 <div class="field"><label asp-for="ExpenseType">Tipo de despesa</label><select asp-for="ExpenseType"><option value="Fixa">Fixa</option><option value="Variável">Variável</option></select></div>
 <div class="field"><label asp-for="PaymentMethod">Forma de pagamento</label><select asp-for="PaymentMethod" id="expensePayment">
+@if(!edit){<option value="">Selecione a forma de pagamento</option>}
 @foreach(var p in new[]{"Pix","Dinheiro","Débito","Crédito","Transferência","Boleto"}){<option value="@p">@p</option>}
 </select></div>
 <div class="field"><label id="expenseAmountLabel" asp-for="Amount">Valor</label><div class="currency-input"><span>R$</span><input asp-for="Amount" type="number" step="0.01" min="0.01" required /></div>
@@ -57,7 +66,7 @@
 <div class="field full"><label asp-for="Notes">Observações</label><textarea asp-for="Notes" rows="3" maxlength="1000" placeholder="Opcional"></textarea></div>
 </div><div class="form-divider"></div>
 @if(!edit){
-<label class="toggle-row"><input asp-for="IsPreviousMonth" type="checkbox" /><span><strong>Referente ao mês passado?</strong><small>Sim: antecipa a data inicial da despesa em um mês, mantendo as regras de pagamento, parcelas e recorrência. Não: mantém o comportamento atual.</small></span></label>
+<label class="toggle-row"><input asp-for="IsPreviousMonth" id="isPreviousMonthExpense" type="checkbox" /><span><strong>Referente ao mês passado?</strong><small>Sim: antecipa a data inicial da despesa em um mês, mantendo as regras de pagamento, parcelas e recorrência. Não: mantém o comportamento atual.</small></span></label>
 <label class="toggle-row"><input asp-for="IsRecurring" id="isRecurring" type="checkbox" /><span><strong>Despesa recorrente mensal</strong><small>Ocorrências mensais até você encerrar a recorrência.</small></span></label>
 }
 <label class="toggle-row" id="paidRow"><input asp-for="Paid" id="isPaid" type="checkbox" /><span><strong>Já está paga</strong><small>O pagamento registrado influencia as métricas de realização.</small></span></label>

@@ -343,7 +343,6 @@
     const result=document.getElementById('fiscalQrResult');
     const accessKey=document.getElementById('FiscalAccessKey');
     const upload=document.getElementById('fiscalQrImage');
-    const xmlInput=document.getElementById('fiscalXmlFile');
     const cameraStart=document.getElementById('fiscalCameraStart');
     const cameraStop=document.getElementById('fiscalCameraStop');
     const cameraBox=document.getElementById('fiscalCameraBox');
@@ -382,13 +381,25 @@
         fill('fiscalCnpjValue',data.issuerCnpj||'');
         fill('fiscalMonthValue',data.issueMonth||'');
         fill('fiscalAmountValue',data.amount!=null?money.format(data.amount):'Não disponível no QR Code');
-        fill('fiscalIssuerValue',null);
-        fill('fiscalPaymentValue',null);
-        fill('fiscalDateValue',data.issueDate?data.issueDate.split('-').reverse().join('/'):'Não disponível no QR Code');
-        fill('fiscalItemsValue',null);
+        fill('fiscalIssuerValue',data.issuerName||null);
+        fill('fiscalPaymentValue',data.paymentMethod||null);
+        fill('fiscalDateValue',data.issueDate?data.issueDate.split('-').reverse().join('/'):'Não identificada');
+        fill('fiscalItemsValue',Array.isArray(data.items)&&data.items.length
+          ?data.items.slice(0,8).join('; ')+(data.items.length>8?'…':''):null);
         const amount=document.querySelector('#expenseForm #Amount');
         if(amount && data.reliableAmount && data.amount>0)amount.value=String(data.amount);
-        // QR code cannot establish the merchant name, items or payment method.
+        const description=document.getElementById('Description');
+        if(description && data.issuerName && !description.value.trim())
+          description.value=data.issuerName.slice(0,250);
+        const method=document.getElementById('expensePayment');
+        if(method && data.paymentMethod && !method.value){
+          method.value=data.paymentMethod;
+          method.dispatchEvent(new Event('change',{bubbles:true}));
+        }
+        setFiscalCategory(data.category);
+        const paid=document.getElementById('isPaid');
+        if(paid && data.paid && ['Débito','Pix','Dinheiro'].includes(data.paymentMethod))
+          paid.checked=true;
         const purchase=document.getElementById('PurchaseDate');
         if(purchase && data.issueDate && !purchase.value){
           purchase.value=data.issueDate;
@@ -402,36 +413,19 @@
           } else {official.removeAttribute('href');official.hidden=true;}
         }
         if(result)result.hidden=false;
-        say((data.message||'Chave fiscal validada.')+' Dados ausentes no QR Code permanecem sem preenchimento automático.');
+        say((data.message||'QR Code validado.')+' Confira todos os campos antes de registrar.');
         return data;
       } catch(error){
         say(error.message||'Não foi possível processar a leitura fiscal.');
         return null;
       } finally{read.disabled=false;}
     }
-    // Local XML parsing: no generative AI and no transmission of the XML to server.
-    const first=(node,name)=>node?.getElementsByTagNameNS('*',name)?.[0]||null;
-    const get=(node,name)=>first(node,name)?.textContent?.trim()||'';
-    const digits=value=>(value||'').replace(/\D/g,'');
-    function categoryFromProducts(items){
-      if(!items.length)return null;
-      const clean=value=>value.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
-      const rules=[
-        ['Alimentação',/\b(arroz|feijao|leite|pao|carne|frango|ovo|ovos|queijo|banana|maca|iogurte|biscoito|farinha|macarrao|acucar|oleo|manteiga|cafe|refrigerante|agua mineral|chocolate)\b/],
-        ['Vestuário',/\b(camiseta|camisa|calca|bermuda|vestido|jaqueta|roupa|tenis|meia|blusa|saia|sapato|calcado)\b/],
-        ['Transporte',/\b(gasolina|diesel|etanol|combustivel)\b/]
-      ];
-      const guessed=items.map(item=>{
-        const matches=rules.filter(rule=>rule[1].test(clean(item)));
-        return matches.length===1?matches[0][0]:null;
-      });
-      return guessed.every(group=>group&&group===guessed[0])?guessed[0]:null;
-    }
-    function setCategory(category){
+    function setFiscalCategory(category){
       if(!category)return;
       const select=document.getElementById('categorySelect');
       if(!select||select.value)return;
-      if([...select.options].some(option=>option.value===category))select.value=category;
+      const matches=[...select.options].some(option=>option.value===category);
+      if(matches)select.value=category;
       else{
         select.value='__new__';
         const custom=document.getElementById('NewCategory');
@@ -439,68 +433,6 @@
       }
       select.dispatchEvent(new Event('change',{bubbles:true}));
     }
-    xmlInput?.addEventListener('change',async()=>{
-      const file=xmlInput.files?.[0];if(!file)return;
-      try{
-        if(file.size>4*1024*1024)throw new Error('O XML deve ter no máximo 4 MB.');
-        const xml=new DOMParser().parseFromString(await file.text(),'application/xml');
-        if(xml.getElementsByTagName('parsererror').length)throw new Error('Arquivo XML inválido.');
-        const info=first(xml,'infNFe');
-        if(!info)throw new Error('O arquivo não contém os dados de uma NFC-e/NF-e.');
-        const key=(info.getAttribute('Id')||'').replace(/^NFe/,'')||digits(get(xml,'chNFe'));
-        if(!/^\d{44}$/.test(key))throw new Error('A chave fiscal de 44 dígitos não foi encontrada no XML.');
-        if(raw)raw.value=key;
-        const verified=await analyzeText(key);
-        if(!verified)return;
-        const emit=first(info,'emit');
-        const merchant=get(emit,'xFant')||get(emit,'xNome');
-        const products=[...info.getElementsByTagNameNS('*','det')]
-          .map(node=>get(first(node,'prod'),'xProd')).filter(Boolean);
-        const total=Number(get(first(info,'ICMSTot'),'vNF'));
-        const issue=get(first(info,'ide'),'dhEmi')||get(first(info,'ide'),'dEmi');
-        const purchaseDate=/^\d{4}-\d{2}-\d{2}/.test(issue)?issue.slice(0,10):null;
-        const paidParts=[...info.getElementsByTagNameNS('*','detPag')];
-        const codes=[...new Set(paidParts.map(p=>get(p,'tPag')).filter(Boolean))];
-        const map={'01':'Dinheiro','03':'Crédito','04':'Débito','15':'Boleto','17':'Pix','18':'Transferência'};
-        const paymentCode=codes.length===1?codes[0]:null;
-        const payment=paymentCode?map[paymentCode]:null;
-        const paidTotal=paidParts.reduce((sum,p)=>sum+(Number(get(p,'vPag'))||0),0);
-        const suggested=categoryFromProducts(products);
-        fill('fiscalIssuerValue',merchant);
-        fill('fiscalPaymentValue',payment||'Não identificada');
-        fill('fiscalDateValue',purchaseDate?purchaseDate.split('-').reverse().join('/'):'Não identificada');
-        fill('fiscalItemsValue',products.length?products.slice(0,7).join('; ')+(products.length>7?'…':''):'Não disponíveis');
-        if(Number.isFinite(total)&&total>0){
-          fill('fiscalAmountValue',money.format(total));
-          const amount=document.getElementById('Amount');
-          if(amount&&!Number(amount.value))amount.value=String(total);
-        }
-        const description=document.getElementById('Description');
-        if(description&&merchant&&!description.value.trim())description.value=merchant.slice(0,250);
-        const method=document.getElementById('expensePayment');
-        if(method&&payment&&!method.value){
-          method.value=payment;
-          method.dispatchEvent(new Event('change',{bubbles:true}));
-        }
-        const date=document.getElementById('PurchaseDate');
-        if(date&&purchaseDate&&!date.value){
-          date.value=purchaseDate;
-          const prev=document.getElementById('isPreviousMonthExpense');
-          if(prev)prev.checked=false;
-        }
-        setCategory(suggested);
-        const paid=document.getElementById('isPaid');
-        if(paid&&payment&&['Débito','Pix','Dinheiro'].includes(payment)&&
-            Number.isFinite(total)&&total>0&&paidTotal+0.001>=total)paid.checked=true;
-        if(result)result.hidden=false;
-        say('XML fiscal identificado. Confira o estabelecimento, produtos, total, pagamento e data antes de salvar.'+
-          (suggested?' Categoria sugerida a partir dos produtos.':' Escolha uma categoria adequada aos produtos.'));
-      }catch(error){
-        say(error.message||'Não foi possível ler o XML fiscal.');
-      }finally{
-        xmlInput.value='';
-      }
-    });
     read?.addEventListener('click',()=>analyzeText(raw?.value||''));
     raw?.addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();analyzeText(raw.value);}});
     raw?.addEventListener('input',()=>{

@@ -7,6 +7,19 @@ using System.Globalization;
 namespace Atlas.Services;
 public sealed class FinancialService(FinanceDbContext db,RecurringService recurrence) {
     private static readonly CultureInfo Pt=CultureInfo.GetCultureInfo("pt-BR");
+    private record DatedAmount(DateTime Date,decimal Amount);
+    // The same forecast rule is used by Overview and Reports: unpaid/unreceived
+    // movements grouped by the actual due/expected date, not the competence.
+    private static (decimal Incoming,decimal Outgoing) ForecastMonth(
+        DateTime periodStart,DateTime today,IEnumerable<DatedAmount> receipts,IEnumerable<DatedAmount> payments) {
+        var from=periodStart.Year==today.Year&&periodStart.Month==today.Month?today:periodStart;
+        var end=periodStart.AddMonths(1);
+        if(end<=today)return (0m,0m);
+        return (
+            receipts.Where(x=>x.Date>=from&&x.Date<end).Sum(x=>x.Amount),
+            payments.Where(x=>x.Date>=from&&x.Date<end).Sum(x=>x.Amount)
+        );
+    }
     private static (DateTime start,DateTime end) Range(int year,int month) {
         if(year is < 2000 or > 2100 || month is < 1 or > 12)throw new ArgumentOutOfRangeException(nameof(month));
         var start=new DateTime(year,month,1);return(start,start.AddMonths(1));
@@ -76,6 +89,8 @@ public sealed class FinancialService(FinanceDbContext db,RecurringService recurr
         // and due dates. The current month starts today; overdue commitments are
         // already covered in Attention and must not masquerade as future cash.
         var monthlyForecast=new List<MonthlyForecastVm>();
+        var datedReceipts=outstandingRevenues.Select(x=>new DatedAmount(x.ExpectedReceiptDate!.Value.Date,x.Amount)).ToList();
+        var datedPayments=outstandingExpenses.Select(x=>new DatedAmount(x.DueDate!.Value.Date,x.Amount)).ToList();
         for(var index=0;index<12;index++) {
             var periodStart=monthStart.AddMonths(index);
             var periodEnd=periodStart.AddMonths(1);
@@ -91,9 +106,9 @@ public sealed class FinancialService(FinanceDbContext db,RecurringService recurr
                 .Concat(outgoingRows.Select(x=>new ForecastEntryVm(x.Id,false,x.Description,
                     x.DueDate!.Value.Date,x.Amount)))
                 .OrderBy(x=>x.ExpectedDate).ThenBy(x=>x.Id).ToList();
+            var totals=ForecastMonth(periodStart,today,datedReceipts,datedPayments);
             monthlyForecast.Add(new MonthlyForecastVm(index,periodStart.Year,periodStart.Month,
-                periodStart.ToString("MMM/yy",Pt),incomingRows.Sum(x=>x.Amount),
-                outgoingRows.Sum(x=>x.Amount),detail));
+                periodStart.ToString("MMM/yy",Pt),totals.Incoming,totals.Outgoing,detail));
         }
         var history=new List<MonthlyPoint>();
         for(var d=chartStart;d<end;d=d.AddMonths(1)) {
@@ -149,15 +164,23 @@ public sealed class FinancialService(FinanceDbContext db,RecurringService recurr
         if(year is < 2000 or > 2100)throw new ArgumentOutOfRangeException(nameof(year));
         var start=new DateTime(year,1,1);var end=start.AddYears(1);
         await recurrence.EnsureThroughAsync(userId,end.AddDays(-1));
+        var today=TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow,
+            TimeZoneInfo.FindSystemTimeZoneById("America/Sao_Paulo")).Date;
+        var forecastReceipts=await db.Revenues.AsNoTracking()
+            .Where(x=>x.UserId==userId&&!x.Received&&x.ExpectedReceiptDate!=null)
+            .Select(x=>new DatedAmount(x.ExpectedReceiptDate!.Value,x.Amount)).ToListAsync();
+        var forecastPayments=await db.Expenses.AsNoTracking()
+            .Where(x=>x.UserId==userId&&!x.Paid&&x.DueDate!=null)
+            .Select(x=>new DatedAmount(x.DueDate!.Value,x.Amount)).ToListAsync();
         var revenues=await db.Revenues.AsNoTracking().Where(x=>x.UserId==userId&&x.Date>=start&&x.Date<end).ToListAsync();
         // Annual reports represent all registered commitments, whether paid or pending.
         // Payment status is reported separately; no financial movement is modified.
         var expenses=await db.Expenses.AsNoTracking().Where(x=>x.UserId==userId&&x.Date>=start&&x.Date<end).ToListAsync();
         var months=new List<MonthlyPoint>();
         for(var m=1;m<=12;m++){
-            var income=revenues.Where(x=>x.Date.Month==m).Sum(x=>x.Amount);
-            var cost=expenses.Where(x=>x.Date.Month==m).Sum(x=>x.Amount);
-            months.Add(new MonthlyPoint(year,m,Pt.DateTimeFormat.GetAbbreviatedMonthName(m).TrimEnd('.'),income,cost,income-cost));
+            var projection=ForecastMonth(new DateTime(year,m,1),today,forecastReceipts,forecastPayments);
+            months.Add(new MonthlyPoint(year,m,Pt.DateTimeFormat.GetAbbreviatedMonthName(m).TrimEnd('.'),
+                projection.Incoming,projection.Outgoing,projection.Incoming-projection.Outgoing));
         }
         return new ReportVm {Year=year,Revenue=revenues.Sum(x=>x.Amount),Expenses=expenses.Sum(x=>x.Amount),
             ReceivedRevenue=revenues.Where(x=>x.Received).Sum(x=>x.Amount),

@@ -45,10 +45,10 @@ public sealed class PushReminderService(
     {
         if (!IsConfigured) throw new InvalidOperationException("Push não configurado.");
 
-        // GitHub scheduled jobs and free hosting can run late. Each slot stays
-        // eligible until the next one, and the SQL claim prevents duplicates.
+        // Only the four designated hours; limited retries in each hour.
+        // An atomic SQL claim prevents duplicate notifications per timeslot.
         var localNow=TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow,BrasiliaTimeZone);
-        var slot=localNow.Hour switch { >=18=>18, >=15=>15, >=12=>12, >=8=>8, _=>0 };
+        var slot=localNow.Hour switch { 8=>8, 12=>12, 15=>15, 18=>18, _=>0 };
         if(slot==0)return 0;
         var today=localNow.Date;
         // Competence is a month, not a bill due date. Include ALL of this month

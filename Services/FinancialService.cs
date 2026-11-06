@@ -49,6 +49,12 @@ public sealed class FinancialService(FinanceDbContext db,RecurringService recurr
         var expenseTotal=periodExpenses.Sum(x=>x.Amount);
         var received=periodRevenue.Where(x=>x.Received).Sum(x=>x.Amount);
         var expensePaid=periodExpenses.Where(x=>x.Paid).Sum(x=>x.Amount);
+        // Historical accounting balance through selected month/year; no annual reset.
+        var cumulativeIncome=await db.Revenues.AsNoTracking()
+            .Where(x=>x.UserId==userId && x.Date<end).SumAsync(x=>x.Amount);
+        var cumulativeCost=await db.Expenses.AsNoTracking()
+            .Where(x=>x.UserId==userId && x.Date<end).SumAsync(x=>x.Amount);
+        var cumulativeResult=cumulativeIncome-cumulativeCost;
 
         // Attention is based on actual due/expected dates, independent of the selected competence.
         var outstandingExpenses=await db.Expenses.AsNoTracking()
@@ -143,7 +149,7 @@ public sealed class FinancialService(FinanceDbContext db,RecurringService recurr
         return new DashboardVm {
             Year=year,Month=month,FullYear=fullYear,Today=today,
             PeriodLabel=fullYear?$"Ano de {year}":start.ToString("MMMM yyyy",Pt),
-            Revenue=revenue,Expenses=expenseTotal,SalesCount=periodRevenue.Count,
+            Revenue=revenue,Expenses=expenseTotal,AccumulatedResult=cumulativeResult,SalesCount=periodRevenue.Count,
             ReceivedRevenue=received,ReceivedInPeriod=received,
             PendingRevenue=periodRevenue.Where(x=>!x.Received).Sum(x=>x.Amount),
             ExpensesPaidInPeriod=expensePaid,

@@ -45,10 +45,11 @@ public sealed class PushReminderService(
     {
         if (!IsConfigured) throw new InvalidOperationException("Push não configurado.");
 
-        // Only the four designated hours; limited retries in each hour.
-        // An atomic SQL claim prevents duplicate notifications per timeslot.
+        // GitHub triggers only at 08/12/15/18 Brasilia. If a scheduled job
+        // starts late, accept it for the current window instead of discarding it.
+        // No worker runs in the app/browser and no extra cron jobs are needed.
         var localNow=TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow,BrasiliaTimeZone);
-        var slot=localNow.Hour switch { 8=>8, 12=>12, 15=>15, 18=>18, _=>0 };
+        var slot=localNow.Hour switch { >=18=>18, >=15=>15, >=12=>12, >=8=>8, _=>0 };
         if(slot==0)return 0;
         var today=localNow.Date;
         // Competence is a month, not a bill due date. Include ALL of this month
@@ -56,7 +57,7 @@ public sealed class PushReminderService(
         var firstDayNextMonth=new DateTime(today.Year,today.Month,1).AddMonths(1);
         var devices=await db.PushDevices.AsNoTracking()
             .Where(x=>x.Active && (x.LastNotifiedDay==null || x.LastNotifiedDay<today ||
-                (x.LastNotifiedDay==today && (x.LastNotifiedSlot==null || x.LastNotifiedSlot!=slot))))
+                (x.LastNotifiedDay==today && (x.LastNotifiedSlot==null || x.LastNotifiedSlot<slot))))
             .OrderBy(x=>x.Id).Take(1000).ToListAsync(ct);
         var users=devices.Select(x=>x.UserId).Distinct().ToList();
         logger.LogInformation("ATLAS push dispatch slot {Slot} date {Day}: {Devices} device(s), {Users} user(s) pending evaluation.",
@@ -129,11 +130,11 @@ public sealed class PushReminderService(
             foreach(var device in devices.Where(x=>x.UserId==userId))
             {
                 ct.ThrowIfCancellationRequested();
-                // Atomic per-slot claim avoids duplicate messages if the ten-minute
-                // worker runs repeatedly or overlapping executions occur.
+                // Atomic SQL claim avoids duplicates across scheduled retries
+                // and prevents older, delayed windows from overwriting newer ones.
                 var claimed=await db.PushDevices.Where(x=>x.Id==device.Id && x.Active &&
                     (x.LastNotifiedDay==null || x.LastNotifiedDay<today ||
-                     (x.LastNotifiedDay==today && (x.LastNotifiedSlot==null || x.LastNotifiedSlot!=slot))))
+                     (x.LastNotifiedDay==today && (x.LastNotifiedSlot==null || x.LastNotifiedSlot<slot))))
                     .ExecuteUpdateAsync(set=>set
                         .SetProperty(x=>x.LastNotifiedDay,(DateTime?)today)
                         .SetProperty(x=>x.LastNotifiedSlot,(int?)slot)

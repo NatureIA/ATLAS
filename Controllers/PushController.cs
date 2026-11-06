@@ -51,6 +51,29 @@ public sealed class PushController(FinanceDbContext db,CurrentUser current,
         return Ok(new{enabled=false});
     }
 
+    [HttpGet("status"),Authorize]
+    public async Task<IActionResult> Status(CancellationToken ct)
+    {
+        var devices=await db.PushDevices.AsNoTracking()
+            .Where(x=>x.UserId==current.Id && x.Active)
+            .Select(x=>new{x.LastNotifiedUtc}).ToListAsync(ct);
+        var today=TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow,
+            TimeZoneInfo.FindSystemTimeZoneById("America/Sao_Paulo")).Date;
+        var overdue=await db.Expenses.AsNoTracking()
+            .CountAsync(x=>x.UserId==current.Id && !x.Paid && x.DueDate!=null && x.DueDate<today,ct);
+        return Ok(new {configured=reminders.IsConfigured,activeDevices=devices.Count,overdue,
+            lastAcceptedUtc=devices.Where(x=>x.LastNotifiedUtc.HasValue)
+                .Select(x=>x.LastNotifiedUtc).OrderByDescending(x=>x).FirstOrDefault()});
+    }
+
+    [HttpPost("test"),Authorize,ValidateAntiForgeryToken]
+    public async Task<IActionResult> Test([FromBody] PushRemoveInput input,CancellationToken ct)
+    {
+        if(!ModelState.IsValid || !PushReminderService.IsValidEndpoint(input.Endpoint))return BadRequest();
+        var message=await reminders.TestDeviceAsync(current.Id,input.Endpoint,ct);
+        return Ok(new {message});
+    }
+
     // Called only by authenticated GitHub Actions; never exposed to user sessions.
     [HttpPost("dispatch"),AllowAnonymous,IgnoreAntiforgeryToken]
     public async Task<IActionResult> Dispatch(CancellationToken ct)

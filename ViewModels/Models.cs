@@ -129,6 +129,7 @@ public class DashboardVm {
     public decimal Revenue {get;set;}
     public decimal Expenses {get;set;}
     public decimal Profit => Revenue-Expenses;
+    public decimal AccumulatedResult {get;set;}
     public decimal Margin => Revenue<=0?0:Math.Round(Profit/Revenue*100,1);
     public int SalesCount {get;set;}
     public decimal Ticket => SalesCount==0?0:Revenue/SalesCount;

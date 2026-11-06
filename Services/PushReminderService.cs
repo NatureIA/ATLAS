@@ -166,6 +166,35 @@ public sealed class PushReminderService(
         return sent;
     }
 
+    // Explicit user-initiated test; it does not consume any scheduled reminder slot.
+    public async Task<string> TestDeviceAsync(int userId,string endpoint,CancellationToken ct) {
+        if(!IsConfigured)return "Notificações não configuradas no servidor.";
+        var hash=HashEndpoint(endpoint);
+        var device=await db.PushDevices.AsNoTracking()
+            .FirstOrDefaultAsync(x=>x.UserId==userId && x.EndpointHash==hash && x.Active,ct);
+        if(device==null)return "Este dispositivo não está registrado para notificações.";
+        try {
+            var vapid=new VapidDetails(config["ATLAS_VAPID_SUBJECT"]!,
+                config["ATLAS_VAPID_PUBLIC_KEY"]!,config["ATLAS_VAPID_PRIVATE_KEY"]!);
+            await new WebPushClient().SendNotificationAsync(
+                new PushSubscription(device.Endpoint,device.P256dh,device.Auth),
+                JsonSerializer.Serialize(new {title="ATLAS — Teste de notificação",
+                    body="Esta notificação confirma que o dispositivo recebeu o teste.",
+                    url="/Home",tag="atlas-push-test"}),vapid,ct);
+            logger.LogInformation("ATLAS push manual test accepted for user {UserId}, device {DeviceId}",userId,device.Id);
+            return "Envio aceito pelo provedor. Confira a notificação neste dispositivo.";
+        } catch(WebPushException ex) {
+            if((int)ex.StatusCode is 404 or 410)
+                await db.PushDevices.Where(x=>x.Id==device.Id)
+                    .ExecuteUpdateAsync(set=>set.SetProperty(x=>x.Active,false),ct);
+            logger.LogWarning(ex,"ATLAS push manual test rejected for device {DeviceId}",device.Id);
+            return $"Provedor recusou a notificação (HTTP {(int)ex.StatusCode}).";
+        } catch(Exception ex) {
+            logger.LogError(ex,"ATLAS push manual test failed for device {DeviceId}",device.Id);
+            return "Falha no envio; consulte os logs da hospedagem.";
+        }
+    }
+
     private Task<int> ReleaseClaim(long id,DateTime today,int slot,CancellationToken ct) =>
         db.PushDevices.Where(x=>x.Id==id && x.LastNotifiedDay==today &&
             x.LastNotifiedSlot==slot && x.LastNotifiedUtc==null)

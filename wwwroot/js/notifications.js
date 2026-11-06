@@ -100,5 +100,37 @@
       close();
     }
   }
+  const status=document.getElementById('atlasPushStatus');
+  const testButton=document.getElementById('atlasPushTest');
+  async function statusCheck(){
+    if(!status)return;
+    try{
+      const response=await fetch('/api/push/status',{credentials:'same-origin',cache:'no-store'});
+      if(!response.ok)throw new Error('Consulta falhou.');
+      const x=await response.json();
+      status.textContent=!x.configured?'Notificações não configuradas no servidor'
+        :x.activeDevices===0?'Nenhum dispositivo ativo registrado'
+        :x.overdue+' despesa(s) vencida(s) · '+x.activeDevices+' dispositivo(s) ativo(s)'+
+          (x.lastAcceptedUtc?' · Último envio aceito: '+new Date(x.lastAcceptedUtc).toLocaleString('pt-BR'):' · Nenhum envio confirmado');
+    }catch(e){status.textContent='Status de notificações indisponível';}
+  }
+  if(testButton)testButton.addEventListener('click',async()=>{
+    testButton.disabled=true;
+    if(status)status.textContent='Tentando enviar notificação…';
+    try{
+      if(!supported||Notification.permission!=='granted')
+        throw new Error('Notificações não autorizadas neste navegador');
+      const registration=await navigator.serviceWorker.ready;
+      const sub=await registration.pushManager.getSubscription();
+      if(!sub)throw new Error('Este navegador não possui assinatura');
+      const response=await fetch('/api/push/test',{method:'POST',credentials:'same-origin',
+        headers:{'Content-Type':'application/json','RequestVerificationToken':token},
+        body:JSON.stringify({endpoint:sub.endpoint})});
+      const x=await response.json();
+      if(status)status.textContent=x.message||'Erro no teste';
+    }catch(e){if(status)status.textContent=e.message||'Falha no teste';}
+    finally{testButton.disabled=false;}
+  });
+  statusCheck();
   init();
 })();

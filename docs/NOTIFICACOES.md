@@ -38,8 +38,10 @@ O arquivo `.github/workflows/push-reminders.yml` tenta acionar `POST /api/push/d
 somente nos horários **08h, 12h, 15h e 18h de Brasília**, com tentativas limitadas aos
 minutos **03, 13 e 23** de cada horário. Não há verificações agendadas nas demais horas.
 O SQL impede notificações duplicadas ao mesmo dispositivo dentro de cada horário.
-Se o GitHub atrasar, o backend aceita o disparo durante a hora correspondente;
-fora dela, não reenvia alertas antigos. O MonsterASP Free poderá hibernar entre as verificações; a requisição agendada tenta despertá-lo. O GitHub Actions e a inicialização da hospedagem podem causar atrasos, e atrasos para fora da hora programada podem resultar em uma notificação não enviada. O GitHub Actions pode atrasar ou até cancelar execuções agendadas; não equivale a monitoramento garantido 24×7.
+Se o GitHub atrasar, o backend aceita o disparo na janela de notificações
+corrente (08h–11h59, 12h–14h59, 15h–17h59 e 18h–23h59).
+Isto não agenda verificações adicionais; somente evita rejeitar disparos
+atrasados. Não reenvia janelas antigas e o SQL impede notificações duplicadas. O MonsterASP Free poderá hibernar entre as verificações; a requisição agendada tenta despertá-lo. O GitHub Actions e a inicialização da hospedagem podem causar atrasos, e atrasos para fora da hora programada podem resultar em uma notificação não enviada. O GitHub Actions pode atrasar ou até cancelar execuções agendadas; não equivale a monitoramento garantido 24×7.
 Também permite execução manual em **Actions**.
 
 ## Funcionamento

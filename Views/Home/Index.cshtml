@@ -38,6 +38,11 @@
       <div class="atlas-overview-metric atlas-overview-metric-emphasis">
         <span>Resultado</span><strong>@Model.Profit.ToString("C")</strong><small>Faturamento − despesas</small>
       </div>
+      <div class="atlas-overview-metric atlas-overview-metric-accumulated">
+        <span>Resultado acumulado</span>
+        <strong>@Model.AccumulatedResult.ToString("C")</strong>
+        <small>Desde o início dos registros até @(Model.FullYear?$"dezembro de {Model.Year}":Model.PeriodLabel) · Receitas − despesas por competência</small>
+      </div>
     </div>
     @if(Model.FullYear){
       <p class="atlas-overview-footnote">O resultado anual considera todas as receitas e despesas de @Model.Year. Para consultar despesas específicas por competência, utilize os filtros no módulo Despesas.</p>

@@ -36,11 +36,11 @@
         <span>Despesas</span><strong>@Model.Expenses.ToString("C")</strong><small>Pagas e pendentes da competência</small>
       </a>
       <div class="atlas-overview-metric atlas-overview-metric-emphasis">
-        <span>Resultado</span><strong>@Model.Profit.ToString("C")</strong><small>Faturamento − despesas</small>
+        <span>Resultado</span><strong class="@(Model.Profit<0?"atlas-negative-value":null)">@Model.Profit.ToString("C")</strong><small>Faturamento − despesas</small>
       </div>
       <div class="atlas-overview-metric atlas-overview-metric-accumulated">
         <span>Resultado acumulado</span>
-        <strong>@Model.AccumulatedResult.ToString("C")</strong>
+        <strong class="@(Model.AccumulatedResult<0?"atlas-negative-value":null)">@Model.AccumulatedResult.ToString("C")</strong>
         <small>Desde o início dos registros até @(Model.FullYear?$"dezembro de {Model.Year}":Model.PeriodLabel) · Receitas − despesas por competência</small>
       </div>
     </div>

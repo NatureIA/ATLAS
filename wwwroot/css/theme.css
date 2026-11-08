@@ -263,6 +263,7 @@ html[data-atlas-theme="dark"] .atlas-overview-metric-emphasis,
 html[data-atlas-theme="dark"] .atlas-small-link[aria-current="page"]{background:#1c2850;border-color:#5c75bf}
 html[data-atlas-theme="dark"] .atlas-overview-metric-accumulated{background:#211b42;border-color:#6452ab}
 html[data-atlas-theme="dark"] .atlas-overview-metric-accumulated strong{color:#cec4ff}
+html[data-atlas-theme="dark"] .atlas-overview-metric strong.atlas-negative-value{color:var(--red)}
 html[data-atlas-theme="dark"] .atlas-overview-metric small,
 html[data-atlas-theme="dark"] .atlas-attention-item small,
 html[data-atlas-theme="dark"] .atlas-overview-footnote,

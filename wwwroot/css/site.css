@@ -414,3 +414,17 @@ a.atlas-overview-metric:focus-visible,.atlas-attention-item:focus-visible,.atlas
 .expense-filter-trigger{
   border-color:transparent!important;
 }
+
+/* Restore outlines only for Resultado and Resultado acumulado cards. */
+.atlas-overview-metric.atlas-overview-metric-emphasis{
+  border-color:#d9d4f5!important;
+}
+.atlas-overview-metric.atlas-overview-metric-accumulated{
+  border-color:#d7d1fc!important;
+}
+html[data-atlas-theme="dark"] .atlas-overview-metric.atlas-overview-metric-emphasis{
+  border-color:#5c75bf!important;
+}
+html[data-atlas-theme="dark"] .atlas-overview-metric.atlas-overview-metric-accumulated{
+  border-color:#6452ab!important;
+}

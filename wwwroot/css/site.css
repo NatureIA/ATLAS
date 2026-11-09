@@ -395,3 +395,22 @@ a.atlas-overview-metric:focus-visible,.atlas-attention-item:focus-visible,.atlas
   .atlas-month-forecast-month{font-size:10px}
   .atlas-month-forecast-result{font-size:9px}
 }
+
+/* Visual preview: remove only outer card/panel outlines; keep spacing and layout. */
+.metric-card:not(.metric-primary),
+.card,
+.summary-secondary,
+.report-payment-stat,
+.expense-due-card,
+.revenue-receipt-summary-card,
+.revenue-cashflow-stat,
+.atlas-overview-metric,
+.atlas-attention-item,
+.atlas-cashflow-grid>div,
+.atlas-cashflow-chart,
+.atlas-overview-details,
+.atlas-month-forecast-chart,
+.atlas-month-forecast-detail,
+.expense-filter-trigger{
+  border-color:transparent!important;
+}

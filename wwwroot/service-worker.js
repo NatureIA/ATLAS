@@ -27,14 +27,25 @@ self.addEventListener('push', event => {
   try { if(event.data) payload={...payload,...event.data.json()}; } catch (_) {}
   const safeUrl=typeof payload.url==='string' && payload.url.startsWith('/') && !payload.url.startsWith('//')
     ?payload.url:'/Expenses?status=pending';
-  event.waitUntil(self.registration.showNotification(String(payload.title).slice(0,90),{
-    body:String(payload.body).slice(0,180),
-    icon:'/icons/atlas-192.png',
-    badge:'/icons/atlas-192.png',
-    tag:'atlas-pending-expenses',
-    renotify:true,
-    data:{url:safeUrl}
-  }));
+  event.waitUntil((async()=>{
+    await self.registration.showNotification(String(payload.title).slice(0,90),{
+      body:String(payload.body).slice(0,180),
+      icon:'/icons/atlas-192.png',
+      badge:'/icons/atlas-192.png',
+      tag:typeof payload.tag==='string' ? payload.tag.slice(0,80) : 'atlas-pending-expenses',
+      renotify:true,
+      data:{url:safeUrl}
+    });
+    // Signed acknowledgement differentiates display API success from push-provider acceptance.
+    if(payload.receipt){
+      try{
+        await fetch('/api/push/receipt',{
+          method:'POST',headers:{'Content-Type':'application/json'},
+          body:JSON.stringify(payload.receipt),cache:'no-store'
+        });
+      }catch(error){ console.warn('ATLAS push receipt unavailable',error); }
+    }
+  })());
 });
 self.addEventListener('notificationclick',event=>{
   event.notification.close();

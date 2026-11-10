@@ -111,7 +111,9 @@
       status.textContent=!x.configured?'Notificações não configuradas no servidor'
         :x.activeDevices===0?'Nenhum dispositivo ativo registrado'
         :x.overdue+' despesa(s) vencida(s) · '+x.activeDevices+' dispositivo(s) ativo(s)'+
-          (x.lastAcceptedUtc?' · Último envio aceito: '+new Date(x.lastAcceptedUtc).toLocaleString('pt-BR'):' · Nenhum envio confirmado');
+          (x.lastDisplayedUtc?' · Última exibição confirmada: '+new Date(x.lastDisplayedUtc).toLocaleString('pt-BR')
+           :x.lastAcceptedUtc?' · Envio aceito, aguardando confirmação do dispositivo'
+           :' · Nenhum envio confirmado');
     }catch(e){status.textContent='Status de notificações indisponível';}
   }
   if(testButton)testButton.addEventListener('click',async()=>{

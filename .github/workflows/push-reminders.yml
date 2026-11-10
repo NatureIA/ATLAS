@@ -1,9 +1,9 @@
 name: ATLAS - lembretes financeiros nos quatro horarios
 on:
   schedule:
-    # 08h, 12h, 15h, 18h Brasilia, with limited retries at +10/+20 min.
+    # 08h, 12h, 15h, 18h Brasilia, with retries every 10 minutes within each agreed hour.
     # UTC-3: 11h, 15h, 18h, 21h UTC. No checks in other hours.
-    - cron: '3,13,23 11,15,18,21 * * *'
+    - cron: '3,13,23,33,43,53 11,15,18,21 * * *'
   workflow_dispatch:
 
 permissions:

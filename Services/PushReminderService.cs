@@ -22,6 +22,26 @@ public sealed class PushReminderService(
 
     public string PublicKey => config["ATLAS_VAPID_PUBLIC_KEY"] ?? "";
 
+    private string ReceiptToken(long id, DateTime day, int slot) {
+        var message=Encoding.UTF8.GetBytes($"{id}|{day:yyyyMMdd}|{slot}");
+        var key=Encoding.UTF8.GetBytes(config["ATLAS_PUSH_JOB_KEY"] ?? "");
+        return Convert.ToHexString(HMACSHA256.HashData(key,message));
+    }
+
+    public async Task<bool> ConfirmDisplayAsync(PushReceiptInput input,CancellationToken ct) {
+        if(!IsConfigured || input.DeviceId<=0 ||
+           !DateTime.TryParseExact(input.Day,"yyyy-MM-dd",System.Globalization.CultureInfo.InvariantCulture,
+                System.Globalization.DateTimeStyles.None,out var day) ||
+           input.Slot is not (8 or 12 or 15 or 18) || input.Token.Length!=64 ||
+           !System.Text.RegularExpressions.Regex.IsMatch(input.Token,"\\A[0-9A-Fa-f]{64}\\z"))return false;
+        var expected=ReceiptToken(input.DeviceId,day,input.Slot);
+        if(!CryptographicOperations.FixedTimeEquals(
+            Encoding.ASCII.GetBytes(expected),Encoding.ASCII.GetBytes(input.Token.ToUpperInvariant())))return false;
+        return await db.PushDevices.Where(x=>x.Id==input.DeviceId && x.Active &&
+            x.LastNotifiedDay==day && x.LastNotifiedSlot==input.Slot)
+            .ExecuteUpdateAsync(set=>set.SetProperty(x=>x.LastDisplayedUtc,(DateTime?)DateTime.UtcNow),ct)>0;
+    }
+
     public static string HashEndpoint(string endpoint) =>
         Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(endpoint)));
 
@@ -121,12 +141,9 @@ public sealed class PushReminderService(
             if(revenueTomorrow>0 && slot is 8 or 18)parts.Add($"{revenueTomorrow} previsto(s) amanhã");
             if(revenueWeek>0 && slot==8)parts.Add($"{revenueWeek} recebimento(s) nos próximos 7 dias");
             if(parts.Count==0)continue;
-            var payload=JsonSerializer.Serialize(new {
-                title=overdue>0 || dueToday>0 || revenueLate>0?"ATLAS — Seu financeiro precisa de atenção":"ATLAS — Próximos compromissos",
-                body=string.Join("; ",parts)+". Consulte suas despesas.",
-                url="/Home",
-                tag="atlas-pending-expenses"
-            });
+            var title=overdue>0 || dueToday>0 || revenueLate>0
+                ?"ATLAS — Seu financeiro precisa de atenção":"ATLAS — Próximos compromissos";
+            var body=string.Join("; ",parts)+". Consulte suas despesas.";
             foreach(var device in devices.Where(x=>x.UserId==userId))
             {
                 ct.ThrowIfCancellationRequested();
@@ -141,6 +158,12 @@ public sealed class PushReminderService(
                         .SetProperty(x=>x.LastNotifiedUtc,(DateTime?)null),ct);
                 if(claimed==0)continue;
                 try {
+                    var payload=JsonSerializer.Serialize(new {
+                        title,body,url="/Home",
+                        tag=$"atlas-reminder-{today:yyyyMMdd}-{slot}",
+                        receipt=new { deviceId=device.Id, day=today.ToString("yyyy-MM-dd"), slot,
+                            token=ReceiptToken(device.Id,today,slot) }
+                    });
                     await client.SendNotificationAsync(
                         new PushSubscription(device.Endpoint,device.P256dh,device.Auth),
                         payload,vapid,ct);

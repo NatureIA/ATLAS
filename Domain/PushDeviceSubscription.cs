@@ -13,6 +13,7 @@ public sealed class PushDeviceSubscription {
     public bool Active { get; set; } = true;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? LastNotifiedUtc { get; set; }
+    public DateTime? LastDisplayedUtc { get; set; }
     public DateTime? LastNotifiedDay { get; set; }
     public int? LastNotifiedSlot { get; set; }
 }
@@ -25,4 +26,11 @@ public sealed class PushSubscriptionInput {
 
 public sealed class PushRemoveInput {
     [Required, MaxLength(2048)] public string Endpoint { get; set; } = "";
+}
+
+public sealed class PushReceiptInput {
+    public long DeviceId { get; set; }
+    public string Day { get; set; } = "";
+    public int Slot { get; set; }
+    public string Token { get; set; } = "";
 }

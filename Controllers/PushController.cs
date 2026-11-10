@@ -56,14 +56,16 @@ public sealed class PushController(FinanceDbContext db,CurrentUser current,
     {
         var devices=await db.PushDevices.AsNoTracking()
             .Where(x=>x.UserId==current.Id && x.Active)
-            .Select(x=>new{x.LastNotifiedUtc}).ToListAsync(ct);
+            .Select(x=>new{x.LastNotifiedUtc,x.LastDisplayedUtc}).ToListAsync(ct);
         var today=TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow,
             TimeZoneInfo.FindSystemTimeZoneById("America/Sao_Paulo")).Date;
         var overdue=await db.Expenses.AsNoTracking()
             .CountAsync(x=>x.UserId==current.Id && !x.Paid && x.DueDate!=null && x.DueDate<today,ct);
         return Ok(new {configured=reminders.IsConfigured,activeDevices=devices.Count,overdue,
             lastAcceptedUtc=devices.Where(x=>x.LastNotifiedUtc.HasValue)
-                .Select(x=>x.LastNotifiedUtc).OrderByDescending(x=>x).FirstOrDefault()});
+                .Select(x=>x.LastNotifiedUtc).OrderByDescending(x=>x).FirstOrDefault(),
+            lastDisplayedUtc=devices.Where(x=>x.LastDisplayedUtc.HasValue)
+                .Select(x=>x.LastDisplayedUtc).OrderByDescending(x=>x).FirstOrDefault()});
     }
 
     [HttpPost("test"),Authorize,ValidateAntiForgeryToken]
@@ -73,6 +75,12 @@ public sealed class PushController(FinanceDbContext db,CurrentUser current,
         var message=await reminders.TestDeviceAsync(current.Id,input.Endpoint,ct);
         return Ok(new {message});
     }
+
+    // The service worker can acknowledge notification display even with the ATLAS tab closed.
+    // No session cookie required: signed receipt, device/day/slot scoped.
+    [HttpPost("receipt"),AllowAnonymous,IgnoreAntiforgeryToken]
+    public async Task<IActionResult> Receipt([FromBody] PushReceiptInput input,CancellationToken ct)
+        => await reminders.ConfirmDisplayAsync(input,ct) ? Ok(new {received=true}) : BadRequest();
 
     // Called only by authenticated GitHub Actions; never exposed to user sessions.
     [HttpPost("dispatch"),AllowAnonymous,IgnoreAntiforgeryToken]
